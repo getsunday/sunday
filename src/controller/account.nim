@@ -53,12 +53,9 @@ ctrl getAccountVerify:
                 .removeRow()
                 .where("token", confirmation.getToken).exec()
 
-          # generate the 2FA secret for the freshly verified user account
-          # TODO
-
           # once updated we can notify the user and redirect to the login page.
           userSession.notify("Your account has been verified. You can now login.", some("/auth/login"))
-          go getAccount # redirects to `/account`
+          go getAuthLogin # redirects to `/account`
 
       # token has expired or is invalid
     userSession.notify("Invalid verification token", some("/auth/login"))
