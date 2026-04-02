@@ -1,10 +1,10 @@
-import std/[options, tables, times, strformat, json, os]
+import std/[options, tables, times, strformat, json, os, strutils]
 
 import pkg/[ozark, twofa]
 import pkg/kapsis/interactive/prompts
 
 import pkg/supranim/service/events
-import pkg/supranim/support/[auth, url, nanoid]
+import pkg/supranim/support/[url, auth, nanoid]
 
 import ../../provider/db
 
@@ -60,7 +60,10 @@ listener "account.password.request":
       # and store it in the database.
       let
         createdAt = now()
-        token = boxEncrypt(boxRandomBytes().bin2hex, user.getPk(), user.getSk())
+        rawToken = generateSalt().toHex()
+        signature = sign(secretKeyFromHex(user.getSk()), rawToken).toHex()
+        token = fmt"{rawToken}:{signature}"
+        # token = boxEncrypt(boxRandomBytes().bin2hex, user.getPk(), user.getSk())
         expInterval = appInstance().config("session.settings.expiration_time").getInt
         # default expiration time is 60 minutes.
         # use `config/session.expiration` to customize the expiration time
@@ -78,6 +81,9 @@ listener "account.password.request":
         displayInfo("account.password.request")
         display("generate password reset link:")
         display($link("/auth/reset-password", {"token": token}))
+      else:
+        # TODO send the password reset link to the user email address using the configured email provider
+        discard
 
 listener "account.register":
   ## Event listener for registering a new user account.
@@ -102,24 +108,27 @@ listener "account.register":
       # if so, abort the registration process
       if anyUser.isEmpty() == false: return
 
-      # otherwise, create a new user account
-      # and store it in the database.
-      let (pk, sk) = auth.boxKeys()
-      let totpSecret = boxEncrypt(boxRandomBytes().bin2hex, pk, sk)
+      # otherwise, create a new user account and store it in the database.
+      let (pk, sk) = auth.boxKeys()         # X25519 keys (hex) required for E2EE features like encrypted notes, files, etc.
+      let (signPk, signSk) = auth.signKeys() # Ed25519 keys (hex) required for signing messages, generating TOTP secrets, etc.
+      # sign it with the user secret key to gen a unique totp secret for the user account
+      let totpSecret = sign(signSk.secretKeyFromHex(), generateSalt(16).toHex())
       let userId = Models.table(Users).insert({
           "name": nanoid.generate(size = 12),
           "username": nanoid.generate(size = 32),
           "email": fields[0],
           "pk": pk,
           "sk": sk,
-          "totp_secret": twofa.genTotpUri(totpSecret, "MyApp", "MyCompany"),
+          "sign_pk": signPk,
+          "sign_sk": signSk,
+          "totp_secret": twofa.genTotpUri(totpSecret.toHex(), "MyApp", "MyCompany"),
           "password": auth.hashPassword(fields[1]),
           "created_at": $(now())
         }).execGet()
 
       # generate the confirmation link for the freshly
       # created user account and store it in the database
-      let confToken = auth.boxEncrypt(fields[0], pk, sk)
+      let confToken = sign(signSk.secretKeyFromHex(), generateSalt(16).toHex()).toHex().toLowerAscii()
       Models.table(UserAccountConfirmations).insert({
         "user_id": $userId,
         "token": confToken,

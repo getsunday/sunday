@@ -45,18 +45,6 @@ initService DB[Global]:
           Models.table(Settings).prepareTable().exec()
           Models.table(Plugins).prepareTable().exec()
 
-          # categories and tags
-          Models.table(Categories).prepareTable().exec()
-          Models.table(Tags).prepareTable().exec()
-
-          # posts and their associations
-          Models.table(Posts).prepareTable().exec()
-          Models.table(PostCategories).prepareTable().exec()
-          Models.table(PostTags).prepareTable().exec()
-
-          # Pages
-          Models.table(Pages).prepareTable().exec()
-
           # user related tables
           Models.table(Users).prepareTable().exec()
           Models.table(UserSessions).prepareTable().exec()
@@ -70,6 +58,18 @@ initService DB[Global]:
           Models.table(RoleHasPermissions).prepareTable().exec()
           Models.table(UserHasPermissions).prepareTable().exec()
           Models.table(UserHasRoles).prepareTable().exec()
+
+          # # categories and tags
+          # Models.table(Categories).prepareTable().exec()
+          # Models.table(Tags).prepareTable().exec()
+
+          # # posts and their associations
+          # Models.table(Posts).prepareTable().exec()
+          # Models.table(PostCategories).prepareTable().exec()
+          # Models.table(PostTags).prepareTable().exec()
+
+          # Pages
+          # Models.table(Pages).prepareTable().exec()
 
           when not defined release:
             # when running in development mode, checks if there are any
