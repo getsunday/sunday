@@ -39,6 +39,20 @@ html[data-bs-theme="light"] .navbar-nav li a.icon-link:hover {
   background-color: rgba(0,0,0,.05);
 }
 
+/* plugin nav drag/drop */
+#sidebar-navigation li[data-plugin-id] {
+  user-select: none;
+}
+
+#sidebar-navigation li[data-plugin-id].drag-armed {
+  cursor: grab;
+  opacity: .75;
+}
+
+#sidebar-navigation li[data-plugin-id].is-dragging {
+  opacity: .35;
+}
+
     """
   body
     div.sticky-top.shadow.mb-3
@@ -46,7 +60,7 @@ html[data-bs-theme="light"] .navbar-nav li a.icon-link:hover {
         strong "Thanks for trying ☀️ Sunday! "
         span " Don't forget to star the project on 👉"
         a.text-light.ms-1
-          href="https://github.com/openpeeps/sunday?utm_source=sunday_dashboard&utm_content=textlink": "GitHub @openpeeps/sunday"
+          href="https://github.com/getsunday/sunday?utm_source=sunday_dashboard&utm_content=textlink": "GitHub @getsunday/sunday"
 
     div.container-fluid.px-0 > div.row.g-0 > div.col-lg-10.mx-auto > div.row.g-0
       div.col-lg-1
@@ -61,7 +75,14 @@ html[data-bs-theme="light"] .navbar-nav li a.icon-link:hover {
                 li.me-3 > a.icon-link.text-dark.text-decoration-none href=dashboard("")
                   icon("flare")
                   span.ms-2: "Overview"
+                
                 // here we'll dynamically inject links provided by plugins
+                for $plugin in $this["navigation"]:
+                  for $item in $plugin["items"]:
+                    li.me-3 data-plugin-id=$plugin["id"] > a.icon-link.text-dark.text-decoration-none href=dashboard(toString($item["url"]))
+                      icon(toString($item["icon"]))
+                      span.ms-2: $item["label"]
+            
             div.col-12.align-self-end.mb-5
               ul.navbar-nav.ms-auto.mt-3.me-2
                 li.me-3 > a.icon-link.text-dark.text-decoration-none href=dashboard("users")
@@ -70,6 +91,9 @@ html[data-bs-theme="light"] .navbar-nav li a.icon-link:hover {
                 li.me-3 > a.icon-link.text-dark.text-decoration-none href=dashboard("plugins")
                   icon("apps")
                   span.ms-2: "Plugins"
+                li.me-3 > a.icon-link.text-dark.text-decoration-none href=dashboard("themes")
+                  icon("brush")
+                  span.ms-2: "Themes"
                 li.me-3 > a.icon-link.text-dark.text-decoration-none href=dashboard("settings")
                   icon("adjustments")
                   span.ms-2: "Settings"
@@ -100,7 +124,7 @@ html[data-bs-theme="light"] .navbar-nav li a.icon-link:hover {
               div.d-flex.align-items-center.justify-content-end.gap-3
                 div.dropdown.d-inline-block
                   a.text-decoration-none.text-dark href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false"
-                    img.me-2 style="border-radius:14px" src="https://media.tenor.com/eo4zzCoaSDwAAAAM/too-much-micro-brewed-coffee.gif" width="36" height="36" alt="User Avatar"
+                    img.me-2 style="border-radius:14px" src="/assets/too-much-micro-brewed-coffee.gif" width="36" height="36" alt="User Avatar"
                     span: "George Lemon"
                   ul.dropdown-menu.dropdown-menu-end.rounded-3
                     li > a.dropdown-item href=dashboard("profile"): "Profile"
@@ -114,6 +138,8 @@ html[data-bs-theme="light"] .navbar-nav li a.icon-link:hover {
         p.mt-4.mb-0: "Sunday Publishing Platform | Made by Humans from OpenPeeps"
         p.mb-0: " &copy; OpenPeeps & Contributors | AGPLv3 License"
 
+    script type="text/javascript" src="/assets/dashboard.js"
+
     // Connects to the Watchout server to listen
     // for file changes and reloads the page when a change is detected.
     if $app["isDev"] == true:
@@ -125,12 +151,6 @@ html[data-bs-theme="light"] .navbar-nav li a.icon-link:hover {
             if(e.data == '1') location.reload()
           });
 
-          setInterval(() => {
-            if(watchout.readyState == WebSocket.OPEN) {
-              watchout.send('ping')
-            }
-          }, 300)
-
           watchout.addEventListener('close', () => {
             setTimeout(() => {
               console.log('Watchout WebSocket is closed. Try again...')
@@ -141,3 +161,14 @@ html[data-bs-theme="light"] .navbar-nav li a.icon-link:hover {
         connectWatchoutServer()
       }
       """
+
+    @js
+const nav = document.getElementById('sidebar-navigation');
+if (nav) {
+  new UI.GroupedDragDrop(nav, {
+    groupAttr: 'data-plugin-id',
+    holdMs: 120,
+    storageKey: 'sunday:dashboard:plugin-nav-order'
+  });
+}
+    @end

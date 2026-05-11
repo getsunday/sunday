@@ -56,12 +56,6 @@ html[data-bs-theme="light"] .navbar-nav li a.icon-link:hover {
             if(e.data == '1') location.reload()
           });
 
-          setInterval(() => {
-            if(watchout.readyState == WebSocket.OPEN) {
-              watchout.send('ping')
-            }
-          }, 300)
-
           watchout.addEventListener('close', () => {
             setTimeout(() => {
               console.log('Watchout WebSocket is closed. Try again...')

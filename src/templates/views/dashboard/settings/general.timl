@@ -1,4 +1,5 @@
 @include("settings/navigation")
+
 div.row > div.col-12
   div.card.p-0.rounded-4
     form method="POST" action=dashboard("settings")
@@ -21,9 +22,9 @@ div.row > div.col-12
                   div.form-text: "A brief description of your site for SEO purposes."
               div.col-lg-6
                 div.mb-3
-                  label.form-label for="site_url": "Site Favicon URL"
-                  input.form-control#site_url type="file" name="site_favicon_url"
-                  div.form-text: "The favicon URL displayed in the browser tab. Recommended size is 16x16 or 32x32 pixels."
+                  label.form-label for="site_favicon": "Site Favicon"
+                  input.form-control#site_favicon type="file" name="site_favicon"
+                  div.form-text: "The favicon displayed in the browser tab. Recommended size is 16x16 or 32x32 pixels."
 
                 div
                   label.form-label for="site_keywords": "Site keywords"
@@ -43,13 +44,15 @@ div.row > div.col-12
                   label.form-label for="default_language": "Default Language"
                   select.form-select#default_language name="default_language"
                     option value="en": "English"
-                  div.form-text: "The default language."
+                  div.form-text: "The default language for Sunday dashboard. For now, only English is supported."
+                    a href="https://github.com/openpeeps/sunday/issues/new" target="_blank" class="ms-1": "Request your language"
               div.col-lg-6
                 div
                   label.form-label for="timezone": "Timezone"
                   select.form-select#timezone name="timezone"
-                    option value="UTC": "UTC"
-                  div.form-text: "The default timezone."
+                    for $tz in $this["settings"]["timezones"]:
+                      option value=$tz: $tz
+                  div.form-text: "The default timezone. This will be used for displaying dates and times."
 
           hr.my-4
 
