@@ -1,6 +1,6 @@
 import std/[options, tables, times, strformat, json, os, strutils]
 
-import pkg/[ozark, twofa]
+import pkg/[ozark, twofa, openparser/yaml]
 import pkg/kapsis/interactive/prompts
 
 import pkg/supranim/service/events
@@ -8,7 +8,7 @@ import pkg/supranim/support/[url, auth, nanoid]
 
 import ../../provider/db
 
-from pkg/supranim/application import appInstance, config
+from pkg/supranim/application import AppInstance, config
 
 listener "account.password.request":
   ## Event listener for requesting a password reset
@@ -64,7 +64,7 @@ listener "account.password.request":
         signature = sign(secretKeyFromHex(user.getSk()), rawToken).toHex()
         token = fmt"{rawToken}:{signature}"
         # token = boxEncrypt(boxRandomBytes().bin2hex, user.getPk(), user.getSk())
-        expInterval = appInstance().config("session.settings.expiration_time").getInt
+        expInterval = AppInstance().config("session.settings.expiration_time").getInt
         # default expiration time is 60 minutes.
         # use `config/session.expiration` to customize the expiration time
 

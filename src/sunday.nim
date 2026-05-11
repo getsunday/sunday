@@ -30,9 +30,17 @@ proc startCommand(v: Values) =
   ## Kapsis `init` command handler
   initStartCommand(v, createDirs = false)
 
+proc updateCommand(v: Values) =
+  ## Kapsis `update` command handler
+  displayInfo("Checking for updates...")
+
 App.cli do:
   start path(directory):
     ## Start a Sunday app from specified directroy
+  
+  update:
+    ## Check for updates to Sunday platform
+
 
 #
 # Initialize available Service Providers.
@@ -41,6 +49,8 @@ App.cli do:
 # `config/` directory.
 #
 App.services do:
+  # init Logger Service
+  logger.init()
 
   # Initialize the global event emitter service. This service provides a
   # singleton event emitter that can be used throughout the application to
@@ -71,10 +81,13 @@ App.services do:
 
   when defined release: # init static assets
     assets.embedAssets("assets")
+    assets.embedDirectory("storage/icons", "icons")
 
 when defined release:
   # Preload embedded assets into memory for faster access in production
-  assets.preloadAssets()
+  assets.preloadBundle("assets")
+  assets.preloadBundle("icons")
+
   App.withAssetsHandler:
     proc (req: var Request, res: var Response, hasFoundResource: var bool) =
       # Serve static assets from the embedded StaticBundle

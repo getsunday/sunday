@@ -10,5 +10,8 @@ import ../service/provider/tim
 
 ctrl get4xx:
   ## Renders a 4xx error page
-  # render("errors.4xx")
-  discard
+  tim.render("errors.4xx")
+
+ctrl get5xx:
+  ## Renders a 5xx error page
+  tim.render("errors.5xx")

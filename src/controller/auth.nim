@@ -5,8 +5,8 @@
 #     Made by Humans from OpenPeeps
 #     https://github.com/openpeeps/sunday
 
-import std/[times, json, sequtils]
-import pkg/[bag, ozark, jsony, kapsis/cli]
+import std/[times, sequtils]
+import pkg/[bag, ozark, kapsis/cli]
 
 import pkg/supranim/controller
 import pkg/supranim/support/auth

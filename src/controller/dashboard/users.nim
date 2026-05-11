@@ -10,12 +10,16 @@ import pkg/[bag, ozark]
 import pkg/supranim/[core/paths, controller]
 import ../../service/provider/[db, session, tim]
 
-
 ctrl getDashboardUsers:
   ## Renders the users dashboard screen.
   withDBPool do:
-    let users = Models.table(Users).selectAll().getAll()
-    render("dashboard.users", layout="dashboard", local = &*{"users": users})
+    withSession do:
+      let users = Models.table(Users).select(["name", "is_confirmed", "created_at"]).getAll()
+      let flashNotifications = userSession.getNotifications("/dashboard/plugins").get(@[])
+      render("dashboard.users.list", layout="dashboard", local = &*{
+        "users": users,
+        "notifications": flashNotifications,
+      })
 
 ctrl getDashboardUsersId:
   ## Renders the user edit screen for a specific user.
@@ -51,3 +55,7 @@ ctrl postDashboardUsersCreate:
   ## Handles the form submission for creating a new user.
   let someData = req.getBodyData(JsonNode)
   json("No data provided")
+
+ctrl getDashboardUsersRoles:
+  ## Renders the user roles management screen in the dashboard.
+  render("dashboard.users.roles", layout="dashboard")

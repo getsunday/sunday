@@ -13,7 +13,7 @@ import pkg/supranim/core/services
 import pkg/supranim/core/[paths, config]
 import pkg/supranim/support/auth
 
-import ./events
+import ./events, ./logger
 
 initService DB[Global]:
   backend do:
@@ -30,14 +30,17 @@ initService DB[Global]:
 
   client do:
     proc init*() =
-      loadEnvStatic()
+      loadEnv()
       ozark.initOzarkDatabase(
         address = getEnv("database.address"),
         name = getEnv("database.name"),
         user = getEnv("database.user"),
         password = getEnv("database.password")
       )
+
       initOzarkPool(10)
+      logger("Service Database: Initialize DB service and connection pool")
+
       try:
         withDBPool do:
 
@@ -59,18 +62,6 @@ initService DB[Global]:
           Models.table(UserHasPermissions).prepareTable().exec()
           Models.table(UserHasRoles).prepareTable().exec()
 
-          # # categories and tags
-          # Models.table(Categories).prepareTable().exec()
-          # Models.table(Tags).prepareTable().exec()
-
-          # # posts and their associations
-          # Models.table(Posts).prepareTable().exec()
-          # Models.table(PostCategories).prepareTable().exec()
-          # Models.table(PostTags).prepareTable().exec()
-
-          # Pages
-          # Models.table(Pages).prepareTable().exec()
-
           when not defined release:
             # when running in development mode, checks if there are any
             # users in the database. if not (first time setup), it creates
@@ -79,7 +70,8 @@ initService DB[Global]:
                                 .selectAll().where("id", "1")
                                 .getAll()
             if userRes.isEmpty:
-              event().emit("account.register", some(@["test@example.com", "strong password here"]))
+              event().emit("account.register",
+                some(@["test@example.com", "strong password here"]))
 
           # first time setup
           let hasSettings = Models.table(Settings).selectAll().getAll().isEmpty == false
@@ -94,6 +86,7 @@ initService DB[Global]:
                 "site_visibility": true
               })
             }).exec()
+            logger("Service Database: Insert default settings into database")
 
       except DbError as e:
         displayError("Database error: " & e.msg)
