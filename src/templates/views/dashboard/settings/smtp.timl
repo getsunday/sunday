@@ -1,0 +1,32 @@
+@include("settings/navigation")
+
+div.row > div.col-12
+  div.card.p-0.rounded-4
+    form method="POST" action=dashboard("settings")
+      div.p-4 > div.row
+        div.col-lg-9
+          div.row > div.col-12
+            h4#site-settings.h5.mb-0: "SMTP Settings"
+            p.text-muted: "Configure the general settings."
+            div.row
+              div.col-lg-6
+                div.mb-3
+                  label.form-label: "Hostname"
+                  input.form-control type="text" name="smtp_host" value="localhost" placeholder="Enter SMTP host"
+                  div.form-text: "Use <code>localhost</code> if the SMTP server is running on the same machine as Sunday."
+              div.col-lg-6
+                div.mb-3
+                  label.form-label: "SMTP Username"
+                  input.form-control type="text" name="smtp_username" placeholder="Enter SMTP username"
+                  div.form-text: "The username for authenticating with your SMTP server. Leave blank if not required."
+            div.row
+              div.col-lg-6
+                div.mb-3
+                  label.form-label: "SMTP Password"
+                  input.form-control type="password" name="smtp_password" placeholder="Enter SMTP password"
+                  div.form-text: "The password for authenticating with your SMTP server. Leave blank if not required"
+              div.col-lg-6
+                div.mb-3
+                  label.form-label: "SMTP Port"
+                  input.form-control type="text" name="smtp_port" value="587" placeholder="Enter SMTP port"
+                  div.form-text: "The port number your SMTP server listens on. Common ports are 25, 465 (SSL), and 587 (TLS)."

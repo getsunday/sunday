@@ -165,7 +165,7 @@ style: """
 
 script type="text/javascript" src="https://cdn.jsdelivr.net/npm/uppy@5.2.3/dist/uppy.min.js"
 
-@js
+@javascript
   document.addEventListener('DOMContentLoaded', function () {
     const uppy = new Uppy.Uppy({
       restrictions: {

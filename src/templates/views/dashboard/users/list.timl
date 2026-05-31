@@ -1,0 +1,114 @@
+div.row
+  div.col-12.pt-4.pb-2
+    div.row
+      div.col-lg-6 > h2.mb-0: "Users"
+      div.col-lg-6.text-lg-end.align-self-center > div.gap-3.d-flex.justify-content-end
+        a.btn.btn-outline-secondary.border-2.btn-sm.rounded-3 data-modal-target="#addUserModal": "Create User"
+        a.btn.btn-primary.btn-sm.rounded-3 href=dashboard("users/roles"): "Manage User Roles"
+    div.row.mt-2.mb-3 > div.col-lg-12 > div.px-3
+      ul.nav.nav-underline
+        li.nav-item
+          a.nav-link.active href=dashboard("users"): "All"
+        li.nav-item
+          a.nav-link href=dashboard("users?tab=active"): "Active"
+        li.nav-item
+          a.nav-link href=dashboard("users?tab=inactive"): "Inactive"
+    
+    // show user notifications if any
+    if len($this["notifications"]) > 0:
+      div.row> div.col-12 > div.alert.alert-info.alert-dismissible.fade.show.border-2.rounded-4 role="alert"
+        for $msg in $this["notifications"]:
+          span: $msg
+        button.btn-close type="button" data-modal-dismiss="alert" aria-label="Close"
+
+div.row.mb-2
+  div.col-lg-12 > div.px-3
+    div.row
+      div.col-lg-4: "Name"
+      div.col-lg-2.text-center: "Status"
+      div.col-lg-3.text-center: "Joined"
+      div.col-lg-3.text-center: "Actions"
+
+div.row.g-3
+  for $user in $this["users"]["entries"]:
+    div.col-lg-12 > div.card.rounded-4.shadow-sm
+      div.card-body.p-4
+        div.row
+          div.col-lg-4 > h6.mb-1: $user["name"]
+          div.col-lg-2.text-center
+            if $user["is_confirmed"] == "t":
+              span.badge.bg-success.rounded-pill: "Active"
+            else:
+              span.badge.bg-secondary.rounded-pill: "Inactive"
+          div.col-lg-3.text-center
+            time datetime=$user["created_at"] title=$user["created_at"]: $user["created_at"]
+          // div.col-lg-2.text-end
+          //   a.btn.btn-sm.btn-outline-primary href=dashboard("users/" & $user["id"]): "Edit"
+          div.col-lg-3.text-center.align-content-center
+            div.dropdown.d-inline-block.ms-2.show-on-hover
+              button.btn.btn-sm.btn-outline-secondary.rounded-3.border-2.dropdown-toggle
+                type="button" data-bs-toggle="dropdown" aria-expanded="false": "Options"
+              ul.dropdown-menu.dropdown-menu-end.rounded-4.shadow-sm
+                li.border-bottom
+                  a.dropdown-item href=dashboard("users/" & $user["id"]) > span: "Edit user"
+                li > a.dropdown-item href="#" > span: "View profile"
+
+// create the bootstrap modal for adding a new user
+div.modal.fade id="addUserModal" tabindex="-1" aria-labelledby="addUserModalLabel" aria-hidden="true"
+  div.modal-dialog.modal-dialog-centered style="max-width: 550px;"
+    div.modal-content.rounded-4.p-4
+      div.modal-header.border-0.align-items-start.pb-0
+        div.w-100
+          h4: "Create user"
+          p.text-muted: "Add a new user manually by filling out the form below"
+        button.btn-close type="button" data-modal-dismiss="modal" aria-label="Close"
+      div.modal-body.pb-0.border-top
+        form data-js-action=dashboard("users/create")
+          div.row.mb-3
+            dov.col-lg-6
+              label.form-label for="email": "Email address"
+              input.form-control.border-2 type="email" id="email" name="email" required
+              div.form-text: "Will send an email with instructions to complete their account setup."
+            div.col-lg-6
+              label.form-label for="name": "User name (optional)"
+              input.form-control.border-2 type="text" id="name" name="name" required
+              div.form-text: "Optionally, you can provide the user's name"
+          div.row.mb-3 > div.col-lg-12
+            label.form-label for="role": "Role"
+            div.row.align-items-center
+              div.col-lg-8
+                select.form-select.border-2 id="role" name="role"
+                  option value="" selected disabled: "Select a role"
+              div.col-lg-4
+                a.btn.btn-sm.btn-outline-secondary.border-2.rounded-3.w-100
+                  data-modal-target="#addRoleModal": "Create new Role"
+            div.row > div.col-12 > div.form-text: "Assign a role to the user to grant them specific permissions."
+          div.border-top.justify-content-between.pt-3.pb-3.d-flex
+            button.btn.btn-sm.btn-outline-secondary.rounded-3.border-2 type="button" data-modal-dismiss="modal": "Close"
+            button.btn.btn-primary.btn-sm.rounded-3 type="submit" data-js-submit="Creating User...": "Create User"
+
+// create role modal
+div.modal.fade id="addRoleModal" tabindex="-1" aria-labelledby="addRoleModalLabel" aria-hidden="true"
+  div.modal-dialog.modal-dialog-centered
+    div.modal-content.rounded-4.p-4.shadow-lg
+      div.modal-header.border-0.align-items-start.pb-0
+        div.w-100
+          h4: "Create role"
+          p.text-muted: "Define a new user role and its permissions."
+        button.btn-close type="button" data-modal-dismiss="modal" aria-label="Close"
+      div.modal-body.pb-0
+        form data-js-action=dashboard("users/roles/create")
+          div.mb-3
+            label.form-label for="roleName": "Role Name"
+            input.form-control type="text" id="roleName" name="roleName" required
+          div.mb-3
+            label.form-label for="permissions": "Permissions"
+            div.form-text.mb-2: "Select the permissions to assign to this role."
+            // list of permissions with checkboxes
+          div.modal-footer.border-0.justify-content-between.p-0
+            button.btn.btn-sm.rounded-3 type="button" data-modal-dismiss="modal": "Close"
+            button.btn.btn-primary.btn-sm.rounded-3 type="submit" data-js-submit="Creating Role...": "Create Role"
+
+@javascript
+document.addEventListener('DOMContentLoaded', () => new UI.MultiModalManager());
+@end

@@ -35,7 +35,7 @@ div.row.g-3
   for $plugin in $this["plugins"]:
     const pluginID = toString($plugin["id"])
     const pluginInstall = dashboard("plugins/") & $pluginID & "/manage"
-    div.col-lg-12 > div.card.rounded-4.shadow-sm data-card-id=$pluginID
+    div.col-lg-12 > div.card.rounded-4.shadow-sm.hover-effect data-card-id=$pluginID
       div.card-body.p-4
         div.row
           div.col-lg-5
@@ -145,7 +145,7 @@ div.modal.fade id="pluginDetailsModal" tabindex="-1" aria-labelledby="pluginDeta
               path d="M12 15l-1.5 -1.5"
             span.ms-1: "Permissions"
           li.nav-item > a.nav-link href="#requirementsTab" data-bs-toggle="tab": "Requirements"
-        div.card.p-4.rounded-4 > div.tab-content.p-0
+        div.card.p-4.rounded-4 > div.tab-content.p-0 style="max-height: 320px; overflow-y: auto;"
           div.tab-pane.fade.show.active id="detailsTab"
           div.tab-pane.fade id="permissionsTab"
             p: "This plugin requires access to the following resources:"
@@ -178,7 +178,7 @@ div.modal.fade id="pluginUninstallModal" tabindex="-1" aria-labelledby="pluginUn
             input type="hidden" name="plugin_id"
             input type="hidden" name="csrf"
 
-@js
+@javascript
   document.addEventListener('DOMContentLoaded', function() {
    
     function fetchCSRFToken(csrfTokenInput, id) {
@@ -265,8 +265,6 @@ div.modal.fade id="pluginUninstallModal" tabindex="-1" aria-labelledby="pluginUn
 
       let permissionsTab = installModal.querySelector('#permissionsTab .permissionsList');
       let permissionsTabUl = document.createElement('ul');
-      permissionsTabUl.style.overflowY = "auto";
-      permissionsTabUl.style.maxHeight = "300px";
       permissionsTabUl.classList.add('list-group', 'shadow', 'rounded-4');
       // sample plugin permission list
       for(const permission of ["filesystem", "database", "template", "event", "middleware", "settings"]) {
@@ -278,37 +276,12 @@ div.modal.fade id="pluginUninstallModal" tabindex="-1" aria-labelledby="pluginUn
           </svg>
           <div>
             <strong class="d-block text-capitalize">${permission}</strong>
-            <span class="text-muted small d-block">Access to the ${permission} for reading and writing files.</span>
+            <span class="text-muted small d-block">Access to the ${permission}</span>
           </div>`;
         permissionsTabUl.appendChild(permissionItem);
       }
 
       permissionsTab.innerHTML = permissionsTabUl.outerHTML;
-
-      // permissionsTab.innerHTML = `
-      //   <ul class="list-group shadow rounded-4">
-      //     <li class="list-group-item bg-transparent d-flex align-items-start">
-      //       <svg class="me-3 flex-shrink-0 align-self-center" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-tabler icons-tabler-outline icon-tabler-device-floppy"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M6 4h10l4 4v10a2 2 0 0 1 -2 2h-12a2 2 0 0 1 -2 -2v-12a2 2 0 0 1 2 -2" /><path d="M10 14a2 2 0 1 0 4 0a2 2 0 1 0 -4 0" /><path d="M14 4l0 4l-6 0l0 -4" /></svg>
-      //       <div>
-      //         <strong class="d-block">Filesystem</strong>
-      //         <span class="text-muted small d-block">Access to the filesystem for reading and writing files.</span>
-      //       </div>
-      //     </li>
-      //     <li class="list-group-item bg-transparent d-flex align-items-start">
-      //       <svg class="me-3 flex-shrink-0 align-self-center" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      //         <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
-      //         <path d="M3 13v-8a2 2 0 0 1 2 -2h14a2 2 0 0 1 2 2v14a2 2 0 0 1 -2 2h-8"/>
-      //         <path d="M3 10h18"/>
-      //         <path d="M10 3v11"/>
-      //         <path d="M2 22l5 -5"/>
-      //         <path d="M7 21.5v-4.5h-4.5"/>
-      //       </svg>
-      //       <div>
-      //         <strong class="d-block">Database</strong>
-      //         <span class="text-muted small d-block">Access to the database for reading and writing data.</span>
-      //       </div>
-      //     </li>
-      //   </ul>`;
       document.getElementById('pluginRequirementsContent').textContent = requirements;
     });
   });	

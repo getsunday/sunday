@@ -1,4 +1,4 @@
 div.col-7.mx-auto > div.row.my-5.py-5 > div.col-12.my-5.py-5.text-center
   h3.fw-light: "500 | Internal Error"
   p.lead: "There was a problem rendering this page"
-  a.btn.btn-light.btn-sm.rounded-3.px-3 href="/": "Back to first page"
+  a.btn.btn-light.btn-sm.rounded-3.px-3 href="/dashboard": "Back to Dashboard"

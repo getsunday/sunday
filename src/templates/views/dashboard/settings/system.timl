@@ -59,7 +59,7 @@ div.row > div.col-12
               a.nav-link.text-light.p-1 href="#memory-management": "Memory Management"
         @include "settings/docs"
 
-@js
+@javascript
 document.addEventListener('DOMContentLoaded', function() {
   fetch("/dashboard/settings/stats")
     .then(response => response.json())

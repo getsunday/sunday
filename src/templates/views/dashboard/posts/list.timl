@@ -1,25 +1,7 @@
-style: """
-.card .show-on-hover {
-  opacity: 0;
-}
-
-html[data-bs-theme="dark"] .card {
-  transition: background-color 0.2s;
-}
-
-html[data-bs-theme="dark"] .card:hover {
-  --bs-card-bg: #1b1b1bff !important;
-}
-
-.card:hover .show-on-hover {
-    opacity: 1;
-}
-"""
 div.row
   div.col-12.pt-4.pb-2
     div.row
-      div.col-lg-6
-        h2.mb-0: "Posts"
+      div.col-lg-6 > h2.mb-0: "Posts"
       div.col-lg-6.text-lg-end.align-self-center
         a.btn.btn-primary.btn-sm.rounded-3 href=dashboard("posts/create"): "Create New Post"
     div.row.mt-2.mb-3
@@ -48,7 +30,7 @@ div.row.g-3
   for $entry in $this["posts"]["entries"]:
     const postId = $entry["id"]
     const editLink = dashboard("posts/" & $postId)
-    div.col-lg-12 > div.card.rounded-4.shadow-sm
+    div.col-lg-12 > div.card.rounded-4.shadow-sm.hover-effect
       div.card-body.p-4
         div.row
           div.col-lg-5

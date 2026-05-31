@@ -58,8 +58,9 @@ div.row > div.col-12
                     span.form-text.d-block: "If enabled, users will be required to set up 2FA on their accounts for extra security. "
               div.col-lg-5
                 select.form-select#twofa_delivery_method name="twofa_delivery_method"
-                  option value="email": "Email"
-                  option value="totp": "TOTP via QR code"
+                  option value="email": "TOTP via Email"
+                  option value="app": "TOTP via Authenticator App"
+                  option value="sms": "TOTP via SMS"
                 div.row.align-items-center
                   div.col-lg-12
                     span.form-text.d-block: "If enabled, users will be required to set up two-factor authentication on their accounts for added security."
@@ -122,7 +123,7 @@ div.row > div.col-12
       div.text-end.px-4
         button.btn.btn-dark.rounded-3 type="submit": "Save Changes"
 
-@js
+@javascript
 document.addEventListener('DOMContentLoaded', function() {
   fetch("/dashboard/settings/stats")
     .then(response => response.json())

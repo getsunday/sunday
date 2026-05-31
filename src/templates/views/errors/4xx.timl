@@ -1,4 +1,4 @@
 div.col-7.mx-auto > div.row.my-5.py-5 > div.col-12.my-5.py-5.text-center
   h3.fw-light: "404 | Not found"
   p.lead: "The page you are looking for does not exist"
-  a.btn.btn-light.btn-sm.rounded-3.px-3 href="/": "Back to first page"
+  a.btn.btn-light.btn-sm.rounded-3.px-3 href="/dashboard": "Back to Dashboard"
