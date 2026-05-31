@@ -7,19 +7,27 @@ when defined(macosx):
   --passC:"-I /opt/local/include"
   --passC:"-Wno-incompatible-function-pointer-types"
 elif defined(linux):
-  # --passL:"-L/usr/local/lib/lib -L/usr/local/lib -Wl,-rpath,/usr/local/lib/lib -Wl,-rpath,/usr/local/lib -levent"
-  --passL:"/usr/lib/x86_64-linux-gnu/libevent.a"
-  --passL:"/usr/lib/x86_64-linux-gnu/libevent_pthreads.a"
-  --passL:"/usr/lib/lib/x86_64-linux-gnu/libmonocypher.a"
+  --passL:"-L/usr/local/lib/lib -L/usr/local/lib -Wl,-rpath,/usr/local/lib/lib -Wl,-rpath,/usr/local/lib -levent -levent_pthreads -lmonocypher"
+  # --passL:"/usr/lib/x86_64-linux-gnu/libevent.a"
+  # --passL:"/usr/lib/x86_64-linux-gnu/libevent_pthreads.a"
+  # --passL:"/usr/lib/lib/x86_64-linux-gnu/libmonocypher.a"
   --passC:"-I /usr/include"
 
---mm:arc
+--mm:atomicArc
 --deepcopy:on
 --define:webapp # todo supWebApp
 --define:ssl
 --define:supraFileserver
 
+--forceBuild:on
+--define:avx2
+--passC:"-mavx2"
+--passL:"-mavx2"
+
 when defined supranimDebug:
+  --define:checkBounds
+  --define:assertions
+  --define:useMalloc
   --passC:"-fsanitize=address -fno-omit-frame-pointer"
   --passL:"-fsanitize=address"
 
@@ -37,4 +45,3 @@ else:
     exec "supra bundle.assets \"" & iconsPath & "\" \"" & outputSVGIcons & "\""
 
 --path:"/Users/georgelemon/Development/packages/supranim-packages/pluginkit/src"
---path:"/Users/georgelemon/Development/packages/openparser/src"

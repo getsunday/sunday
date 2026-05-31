@@ -6,7 +6,9 @@
 #     https://github.com/openpeeps/sunday
 
 import std/[os, envvars, osproc, strutils, times]
-import pkg/[bag, ozark]
+import pkg/bag
+import pkg/ozark/driver/psql
+
 import pkg/supranim/[controller, application]
 import pkg/supranim/core/[paths, utils, fileserver]
 

@@ -16,27 +16,6 @@ routes do:
       # Dashboard overview
       get "/"
 
-      # Posts routes
-      get "/posts"
-      get "/posts/{id:id}"
-      (get, post) -> "/posts/create"
-
-      # Pages routes
-      get "/pages"
-      get "/pages/{id:id}"
-      (get, post) -> "/pages/create"
-
-      # Categories routes
-      get "/categories"
-      get "/categories/{id:id}"
-      (get, post) -> "/categories/create"
-      delete "/categories/{id:id}"
-
-      # Comments routes
-      get "/comments"
-      post "/comments/{id:id}/approve"
-      post "/comments/{id:id}/delete"
-
       # Media routes
       get "/media"
       (get, post) -> "/media/upload"
@@ -47,9 +26,16 @@ routes do:
       post "/plugins/manage"
       post "/plugins/manage/csrf"
 
+      # Themes routes
+      get "/themes"
+      post "/themes/manage"
+      post "/themes/upload"
+
+      # Users routes
       get "/users"
       (get, patch, delete) -> "/users/{id:id}"
       (get, post) -> "/users/create"
+      get "/users/roles"
 
       # Settings routes
       get "/settings"
@@ -57,7 +43,6 @@ routes do:
       
       post "/settings/freememory"
       post "/settings/backup"
-
 
   # Account routes
   get "/account"
@@ -73,24 +58,26 @@ routes do:
 
   #
   # Front-end routes
+  # The `membership` middleware is applied to all front-end routes
+  # TODO Supranim route handler should support applying middleware to multiple routes at once
   #
   get "/" {.middleware: [membership].}
     # GET route links to `getHomepage` controller
   
-  get "/feed.xml"
-    # GET route links to `getFeed` controller
+  # get "/feed.xml"
+  #   # GET route links to `getFeed` controller
   
-  get "/sitemap.xml"
-    # GET route links to `getSitemap` controller
+  # get "/sitemap.xml"
+  #   # GET route links to `getSitemap` controller
 
-  get "/{slug:slug}" {.middleware: [membership].}
-    # GET route links to `getSlug` controller, which handles
-    # rendering posts and pages based on the slug
+  # # get "/{slug:slug}" {.middleware: [membership].}
+  # #   # GET route links to `getSlug` controller, which handles
+  # #   # rendering posts and pages based on the slug
   
-  get "/category/{slug:slug}" {.middleware: [membership].}
-    # GET route links to `getCategorySlug` controller, which renders
-    # a list of posts in the specified category
+  # get "/category/{slug:slug}" {.middleware: [membership].}
+  #   # GET route links to `getCategorySlug` controller, which renders
+  #   # a list of posts in the specified category
 
-  get "/tag/{slug:slug}"  {.middleware: [membership].}
-    # GET route links to `getTagSlug` controller, which renders
-    # a list of posts with the specified tag
+  # get "/tag/{slug:slug}"  {.middleware: [membership].}
+  #   # GET route links to `getTagSlug` controller, which renders
+  #   # a list of posts with the specified tag

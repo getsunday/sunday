@@ -4,9 +4,11 @@
 #          Made by Humans from OpenPeeps
 #          https://github.com/openpeeps/sunday
 
-import std/[os, json, strutils]
+import std/[os, strutils]
 
-import pkg/[bag, ozark]
+import pkg/[bag, openparser/json]
+import pkg/ozark/driver/psql
+
 import pkg/supranim/[core/paths, controller]
 import ../../service/provider/[db, session, tim]
 
@@ -14,8 +16,7 @@ ctrl getDashboardMedia:
   ## Renders the media library dashboard screen.
   withDBPool do:
     let mediaItems = Models.table(MediaLibrary)
-                           .selectAll()
-                           .orderDescBy(["uploaded_at"])
+                           .selectAll() #  .orderDescBy(["uploaded_at"])
                            .getAll()
     render("dashboard.media.list", layout="dashboard", local = &*{
       "mediaItems": mediaItems,

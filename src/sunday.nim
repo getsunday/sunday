@@ -49,6 +49,9 @@ App.cli do:
 # `config/` directory.
 #
 App.services do:
+  # init Storage Service
+  storage.init(App)
+
   # init Logger Service
   logger.init()
 
@@ -59,6 +62,7 @@ App.services do:
 
   # init DB Engine
   db.init()
+
 
   # init Plugin Manager
   pluggable.init(App)

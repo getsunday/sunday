@@ -5,11 +5,7 @@
 #     Made by Humans from OpenPeeps
 #     https://github.com/openpeeps/sunday
 
-import std/[os, json]
-
-import pkg/[bag, ozark]
 import pkg/supranim/[core/paths, controller]
-import ../../service/provider/[db, session, tim]
 
 ctrl getFeedXML:
   ## Renders the RSS feed XML

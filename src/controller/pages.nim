@@ -7,7 +7,9 @@
 
 import std/[os, json]
 
-import pkg/[bag, ozark]
+import pkg/bag
+import pkg/ozark/driver/psql
+
 import pkg/supranim/[core/paths, controller]
 import ../service/provider/[db, session, tim]
 

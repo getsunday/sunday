@@ -5,17 +5,20 @@
 #     Made by Humans from OpenPeeps
 #     https://github.com/openpeeps/sunday
 
-import std/[os, json]
+import pkg/bag
+import pkg/ozark/driver/psql
 
-import pkg/[bag, ozark]
-import pkg/supranim/[core/paths, controller]
-import ../../service/provider/[db, session, tim]
+import pkg/supranim/controller
+
+import ../../service/provider/[db, tim]
 
 ctrl getDashboard:
   ## Renders the posts overview dashboard screen.
   withDBPool do:
-    let countPosts = Models.table(Posts).select("id").getAll().len
-    let countComments = Models.table(Comments).select("id").getAll().len
+    # let countPosts = Models.table(Posts).select("id").getAll().len
+    # let countComments = Models.table(Comments).select("id").getAll().len
+    let countPosts = 42 # placeholder
+    let countComments = 1337 # placeholder
     render("dashboard.overview", layout="dashboard", local = &*{
       "countPosts": countPosts,
       "countComments": countComments
