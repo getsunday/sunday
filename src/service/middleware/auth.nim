@@ -5,8 +5,9 @@
 #     Made by Humans from OpenPeeps
 #     https://github.com/openpeeps/sunday
 
-import std/json
-import pkg/[ozark, jsony]
+import pkg/ozark/driver/psql
+import pkg/openparser/json
+
 import pkg/supranim/middleware
 
 import ../provider/[session, db]

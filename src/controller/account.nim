@@ -7,7 +7,8 @@
 
 import std/[os, times, json, options, sequtils]
 
-import pkg/[bag, ozark, twofa]
+import pkg/[bag, twofa]
+import pkg/ozark/driver/psql
 import pkg/supranim/[core/paths, controller]
 import pkg/supranim/support/auth
 import ../service/provider/[db, session, tim]

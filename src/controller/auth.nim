@@ -6,7 +6,8 @@
 #     https://github.com/openpeeps/sunday
 
 import std/[times, sequtils]
-import pkg/[bag, ozark, kapsis/cli]
+import pkg/[bag, kapsis/cli]
+import pkg/ozark/driver/psql
 
 import pkg/supranim/controller
 import pkg/supranim/support/auth

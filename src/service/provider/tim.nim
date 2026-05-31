@@ -145,7 +145,7 @@ initService Tim[Global]:
       # You can customize this based on your frontend framework's conventions
       req.getHeaders().isSome and req.getHeaders().get().hasKey("X-Requested-With")
 
-    template renderFrontend*(view: sink string, layout: sink string = "base",
+    template renderFrontend*(view: string, layout: string = "base",
                              httpCode = Http200, local: JsonNode = nil): untyped =
       ## Renders a Tim template using the frontend engine and sends it as an HTTP response.
       ## It must be used within a route handler (controller).

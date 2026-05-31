@@ -7,7 +7,8 @@
 
 import std/[os, tables, times]
 
-import pkg/[pluginkit, ozark, openparser/json]
+import pkg/[pluginkit, openparser/json]
+import pkg/ozark/driver/psql
 import pkg/libevent/bindings/http
 import pkg/supranim/core/[application, router,
                       request, response, services]
