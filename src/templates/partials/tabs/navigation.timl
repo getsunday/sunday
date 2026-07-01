@@ -1,0 +1,19 @@
+// This partial renders the navigation tabs for any dashboard page that has multiple tabs
+div.row > div.col-12.pt-4
+  div.row
+    div.col-lg-6 > h2.mb-2: $this["page_title"]
+    if $this["notifications"].len > 0:
+      div.col-12 > div.alert.alert-info.rounded-4
+        for $notification in $this["notifications"]:
+          div: $notification
+  div.row
+    div.col-lg-12 > div.px-3
+      ul.nav.nav-underline
+        const currentTab = getCurrentTab($this["path"])
+        for $tab in $this["tabs"]:
+          const currTab = toString($tab["name"])
+          li.nav-item
+            if $currTab == $currentTab or len($currentTab) == 0 and $currTab == $this["tabs"][0]["name"]:
+              a.nav-link.active.fw-normal href=dashboard($this["page_slug"] & "?tab=" & $tab["name"]): $tab["label"]
+            else:
+              a.nav-link href=dashboard($this["page_slug"] & "?tab=" & $tab["name"]): $tab["label"]

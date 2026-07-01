@@ -1,0 +1,7 @@
+div.card.rounded-4.shadow-sm.border-0.mt-3.pt-5.bg-pseudo-gradient style="background-size:cover; background-repeat:no-repeat; background-image:url(https://images.pexels.com/photos/4735766/pexels-photo-4735766.jpeg)"
+  div.card-body.bg-opacity-50.pt-5.mt-5.border-0.pb-4
+    h5.text-light: "📚 Documentation"
+    p.text-light: "Learn more about Sunday by visiting the official documentation 👇"
+    a.btn.btn-sm.btn-outline-light.rounded-3.fw-medium.border-2.py-0.px-1
+      href="https://github.com/openpeeps/sunday"
+      target="_blank": "Check Documentation"
