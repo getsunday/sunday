@@ -16,6 +16,7 @@
 ## Key Features
 - Compiled, fast and lightweight with a small memory footprint
 - Built on top of the [Supranim web framework](https://github.com/supranim/supranim)
+- Flat file storage or PostgreSQL support for flexible data management
 - Posts, pages, comments, categories and tags
 - User authentication and management
 - Media management with file uploads
@@ -23,6 +24,7 @@
 - Native plugin system for extensibility
 - Beautiful dashboard UI powered by **Bootstrap5**
 - Themes system for easy customization based on **Tim Engine**
+- RESTful API for headless CMS capabilities
 
 > [!NOTE]
 > Sunday is still in active development. Expect frequent updates and new features as we work towards a stable release.
@@ -76,8 +78,10 @@ npm run build
 - 🐛 Found a bug? [Create a new Issue](https://github.com/openpeeps/sunday/issues)
 - 👋 Wanna help? [Fork it!](https://github.com/openpeeps/sunday/fork)
 - 🎉 Spread the word! **Tell your friends about Sunday**
-- 😎 [Get €20 in cloud credits from Hetzner](https://hetzner.cloud/?ref=Hm0mYGM9NxZ4)
-- 🥰 [Donate via PayPal address](https://www.paypal.com/donate/?hosted_button_id=RJK3ZTDWPL55C)
+
+|  |  |
+|---|---|
+| <a href="https://opencode.ai/go?ref=BHMEEK48QX"><img src="https://github.com/openpeeps/pistachio/blob/main/.github/opencode.png" alt="OpenCode"></a> | Switch to **Open-Source LLMs** via OpenCode GO, choosing from a variety of powerful models such as DeepSeek, Qwen, Kimi, GLM-5, MiniMax, MiMo. 🍕 [Use our referral link to get started!](https://opencode.ai/go?ref=BHMEEK48QX)|
 
 ### 🎩 License
 Sunday Publishing Platform | `AGPLv3` license. [Made in 🇪🇺 EU by Humans from OpenPeeps](https://github.com/openpeeps).<br>
