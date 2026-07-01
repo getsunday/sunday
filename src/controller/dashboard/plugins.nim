@@ -21,22 +21,46 @@ ctrl getDashboardPlugins:
   withSession do:
     withDBPool do:
       let currentTab: Option[string] = req.getTabName()
+      let tabs = %*[
+        {
+          "name": "all",
+          "label": "All"
+        },
+        {
+          "name": "installed",
+          "label": "Installed"
+        },
+        {
+          "name": "uninstalled",
+          "label": "Uninstalled"
+        },
+        {
+          "name": "trash",
+          "label": "Trash"
+        }
+      ]
+      let notifications = userSession.getNotifications("/dashboard/plugins?tab=" & currentTab.get("all"))
       case currentTab.get("all")
-      of "installed":
-        render("dashboard.plugins.installed", layout="dashboard", local = &*{
-          "currentTab": currentTab.get()
-        })
-      of "uninstalled":
-        render("dashboard.plugins.uninstalled", layout="dashboard", local = &*{
-          "currentTab": currentTab.get()
-        })
-      of "trash":
-        render("dashboard.plugins.trash", layout="dashboard", local = &*{
-          "currentTab": currentTab.get()
+      of "installed", "uninstalled", "trash":
+        render("dashboard.plugins.list", layout="dashboard", local = &*{
+          "page_title": "Plugins",
+          "page_slug": "plugins",
+          "tabs": tabs,
+          "currentTab": currentTab.get(),
+          "plugins": [],
+          "notifications": notifications,
+          "permission_icons": {
+            "filesystem": $icon("device-floppy"),
+            "database": $icon("database"),
+            "template": $icon("template"),
+            "event": $icon("calendar-event"),
+            "middleware": $icon("keyframe-align-center"),
+            "settings": $icon("settings"),
+          }
         })
       else:
         if currentTab.isSome and currentTab.get() != "all":
-          render("errors.4xx")
+          render("errors.4xx") # todo make a custom 4xx error page for invalid tabs
         else:
           var availablePlugins: seq[JsonNode]
           for plugin in pluginManager().manager.plugins():
@@ -64,8 +88,11 @@ ctrl getDashboardPlugins:
               "url": plugin.getUrl(),
             })
 
-          let flashNotifications = userSession.getNotifications("/dashboard/plugins").get(@[])
+          let flashNotifications = userSession.getNotifications("/dashboard/plugins")
           render("dashboard.plugins.list", layout="dashboard", local = &*{
+            "page_title": "Plugins",
+            "page_slug": "plugins",
+            "tabs": tabs,
             "plugins": availablePlugins,
             "notifications": flashNotifications,
             "permission_icons": {
