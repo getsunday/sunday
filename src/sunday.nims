@@ -5,6 +5,7 @@ when defined(macosx):
   --passL:"/opt/local/lib/libevent_pthreads.a"
   --passL:"/usr/local/lib/libmonocypher.a"
   --passC:"-I /opt/local/include"
+  --passC:"-I /usr/local/include"
   --passC:"-Wno-incompatible-function-pointer-types"
 elif defined(linux):
   --passL:"-L/usr/local/lib/lib -L/usr/local/lib -Wl,-rpath,/usr/local/lib/lib -Wl,-rpath,/usr/local/lib -levent -levent_pthreads -lmonocypher"
@@ -13,6 +14,7 @@ elif defined(linux):
   # --passL:"/usr/lib/lib/x86_64-linux-gnu/libmonocypher.a"
   --passC:"-I /usr/include"
 
+--define:supraNative
 --mm:atomicArc
 --deepcopy:on
 --define:webapp # todo supWebApp

@@ -1,5 +1,4 @@
-# A simple publishing platform powered by Supranim,
-# a modern web framework for Nim.
+# Sunday - A simple publishing platform powered by Supranim
 #
 # (c) 2026 George Lemon | AGPLv3 License
 #     Made by Humans from OpenPeeps
@@ -49,25 +48,25 @@ App.cli do:
 # `config/` directory.
 #
 App.services do:
-  # init Storage Service
+  # Initialize Storage Service
   storage.init(App)
 
-  # init Logger Service
+  # Initialize Logger Service
   logger.init()
 
-  # Initialize the global event emitter service. This service provides a
-  # singleton event emitter that can be used throughout the application to
-  # emit and listen for custom events.
+  # Initialize the global event emitter service
   events.init()
 
-  # init DB Engine
+  # Initialize Ozark Database Engine
   db.init()
+  
+  # Init Oris Internationalization Service
+  locales.init()
 
-
-  # init Plugin Manager
+  # Initialize Sunday's Plugin Manager
   pluggable.init(App)
 
-  # init Tim Engine
+  # Initialize Tim Templating Engine
   tim.init(
     App,
     App.config("tim.source").getStr,
@@ -86,6 +85,17 @@ App.services do:
   when defined release: # init static assets
     assets.embedAssets("assets")
     assets.embedDirectory("storage/icons", "icons")
+
+macro loadLanguages =
+  # Macro for loading all language files from the i18n directory at compile time
+  result = newStmtList()
+  for localModule in walkDirRec(basePath / "service" / "i18n"):
+    if localModule.endsWith(".nim"):
+      let f = localModule.splitFile
+      if f.name[0] notin ['!', '_']:
+        add result, nnkImportStmt.newTree(newLit(localModule))
+
+loadLanguages()
 
 when defined release:
   # Preload embedded assets into memory for faster access in production

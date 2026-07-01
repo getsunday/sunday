@@ -16,7 +16,7 @@ import pkg/vancode/interpreter/value
 import pkg/[tim, iconim]
 import pkg/kapsis/interactive/prompts
 
-import ./logger
+import ./logger, ./locales
 
 export HttpCode, render, `&*`
 export times.now, times.format, iconim
@@ -96,6 +96,12 @@ initService Tim[Global]:
             return initValue("")
           )
 
+        timBackend.userScript.addProc("i18n", @[paramDef("key", ttyString)], ttyString,
+          proc (args: StackView, argc: int): value.Value =
+            # A helper to translate a key using the I18n service
+            return initValue(i18n().translate(args[0].stringVal[]))
+          )
+
         tim.initCommonStorage do:
           {
             "path": req.getUrl(),
@@ -153,11 +159,11 @@ initService Tim[Global]:
         let html = getTimFrontInst().themeRender(view, layout, local)
         respond(httpCode, html)
       except TimEngineError as e:
-        logger("Tim Engine: " & e.msg, ERROR)
+        logger("Tim Engine: " & e.msg & "\n" & e.getStackTrace(), ERROR)
         let html = getTimFrontInst().themeRender("errors.5xx", layout, local)
         respond(Http500, html)
       except Exception as e:
-        logger("Tim Engine: " & e.msg, ERROR)
+        logger("Tim Engine: " & e.msg & "\n" & e.getStackTrace(), ERROR)
         let html = getTimFrontInst().themeRender("errors.5xx", layout, local)
         respond(Http500, html)
       return # blocks further execution in the route handler after rendering the view
@@ -169,10 +175,10 @@ initService Tim[Global]:
       try:
         respond(httpCode, getTimBackInst().render(view, layout, local))
       except TimEngineError as e:
-        logger("Tim Engine: " & e.msg, ERROR)
+        logger("Tim Engine: " & e.msg & "\n" & e.getStackTrace(), ERROR)
         respond(Http500, getTimBackInst().render("errors.5xx", layout, local))
       except Exception as e:
-        logger("Tim Engine: " & e.msg, ERROR)
+        logger("Tim Engine: " & e.msg & "\n" & e.getStackTrace(), ERROR)
         respond(Http500, getTimBackInst().render("errors.5xx", layout, local))
       return # blocks further execution in the route handler after rendering the view
 
@@ -182,9 +188,9 @@ initService Tim[Global]:
       try:
         respond(httpCode, getTimBackInst().renderView(view, local))
       except TimEngineError as e:
-        logger("Tim Engine: " & e.msg, ERROR)
+        logger("Tim Engine: " & e.msg & "\n" & e.getStackTrace(), ERROR)
         respond(Http500, getTimBackInst().renderView("errors.5xx", local))
       except Exception as e:
-        logger("Tim Engine: " & e.msg, ERROR)
+        logger("Tim Engine: " & e.msg & "\n" & e.getStackTrace(), ERROR)
         respond(Http500, getTimBackInst().renderView("errors.5xx", local))
       return # blocks further execution in the route handler after rendering the view

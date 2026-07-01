@@ -1,0 +1,56 @@
+div.row
+  div.col-12.pt-4.pb-2
+    div.row > div.col-lg-6 > h2.mb-0: "Themes"
+    div.row.mt-2.mb-3 > div.col-lg-12 > div.px-3
+      ul.nav.nav-underline
+        li.nav-item
+          a.nav-link.active href=dashboard("themes"): "All"
+        li.nav-item
+          a.nav-link href=dashboard("themes?tab=installed"): "Installed"
+        li.nav-item
+          a.nav-link href=dashboard("themes?tab=uninstalled"): "Uninstalled"
+        li.nav-item
+          a.nav-link href=dashboard("themes?tab=trash")
+            span: "Trash"
+            span.small.rounded-3.badge.bg-secondary.ms-1: "3"
+
+div.row.mb-2
+  div.col-lg-12 > div.px-3
+    div.row
+      div.col-lg-5: "Theme"
+      div.col-lg-2.text-center: "Status"
+      div.col-lg-2.text-center: "Author"
+div.row.g-3
+  for $theme in $this["themes"]:
+    const themeId = toString($theme["id"])
+    div.col-lg-12 > div.card.rounded-4.shadow-sm.hover-effect data-card-id=$themeId
+      div.card-body.p-4 > div.row
+        div.col-lg-5
+          h6.mb-1 > a.text-decoration-none.text-light href="#"
+            data-bs-toggle="modal" 
+            data-bs-target="#themeDetailsModal"
+            data-theme-name=$theme["name"]
+            data-theme-description=$theme["description"]
+            data-theme-version=$theme["version"]
+            data-theme-license=$theme["license"]
+            data-theme-author=$theme["author"]:
+            $theme["name"]
+          p.text-muted.mb-0.lh-sm.small: $theme["description"]
+          ul.list-unstyled.d-flex.gap-3.mt-2.mb-0
+            li.ms-1.text-muted.small
+              svg.text-muted.me-1 xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                path stroke="none" d="M0 0h24v24H0z" fill="none"
+                path d="M10 18a2 2 0 1 0 4 0a2 2 0 1 0 -4 0"
+                path d="M5 6a2 2 0 1 0 4 0a2 2 0 1 0 -4 0"
+                path d="M15 6a2 2 0 1 0 4 0a2 2 0 1 0 -4 0"
+                path d="M7 8v2a2 2 0 0 0 2 2h6a2 2 0 0 0 2 -2v-2"
+                path d="M12 12l0 4"
+              span: $theme["version"]
+            li.ms-1.text-muted.small
+              svg.text-muted.me-1 xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                path stroke="none" d="M0 0h24v24H0z" fill="none"
+                path d="M15 21h-9a3 3 0 0 1 -3 -3v-1h10v2a2 2 0 0 0 4 0v-14a2 2 0 1 1 2 2h-2m2 -4h-11a3 3 0 0 0 -3 3v11"
+                path d="M9 7l4 0"
+                path d="M9 11l4 0"
+              span: $theme["license"]
+          

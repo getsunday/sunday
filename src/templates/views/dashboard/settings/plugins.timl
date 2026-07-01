@@ -1,38 +1,56 @@
-@include("settings/navigation")
-div.row > div.col-12 > div.card.p-0.rounded-4 > div.p-4 > div.row
-  div.col-lg-9
-    div.row > div.col-12
-      h4#updates.h5.mb-0: "Plugin Updates"
-      p.text-muted: "Keep your Sunday plugins up to date with the latest features and security patches."
-      div.row
-        // card for plugin update checks setting
-        div.col-lg-6 > div.card.rounded-4.shadow-sm > div.card-body > div.form-check.form-switch
-          input.form-check-input#plugin_update_checks type="checkbox" name="plugin_update_checks"
-          label.form-check-label for="plugin_update_checks": "Allow plugin updates"
-          span.form-text.d-block: "If enabled, Sunday will periodically check for updates to your installed plugins"
+@include("tabs/navigation")
 
-        // card for confirmation email setting
-        div.col-lg-6 > div.card.rounded-4.shadow-sm > div.card-body > div.form-check.form-switch
-          input.form-check-input#maintenance_mode type="checkbox" name="maintenance_mode"
-          label.form-check-label for="maintenance_mode": "Notify on plugin updates"
-          div.row.align-items-center
-            div.col-lg-12
-              span.form-text.d-block: "All administrators will receive an email notification when a plugin update is available"
-    hr.my-4
+macro settingsForm(name: string) {
+  form method="POST" action=dashboard("settings")
+    input type="hidden" name="section" value=$name
+    input type="hidden" name="csrf" value=$this["csrfToken"]
+    @statement
+}
 
-    div.row > div.col-12
-      h4#plugin-management.h5.mb-0: "Signing and verification"
-      p.text-muted: "Ensure the integrity and authenticity of your plugins with signing and verification settings."
-      div.row > div.col-12 > div.alert.alert-info.rounded-4: "This feature is currently in development"
+div.row > div.col-12
+  @settingsForm "plugins":
+    div.card.p-0.rounded-4
+      div.p-4 > div.row
+        div.col-lg-9
+          div.row > div.col-12
+            h4#plugin-updates.h5.mb-0: "Plugin Updates"
+            p.text-muted: "Keep your Sunday plugins up to date with the latest features and security patches."
+            div.row
+              div.col-lg-6 > div.card.rounded-4.shadow-sm > div.card-body > div.form-check.form-switch
+                if $this["settings"]["data"]["plugin_update_checks"]:
+                  input.form-check-input#plugin_update_checks type="checkbox" name="plugin_update_checks" checked
+                else:
+                  input.form-check-input#plugin_update_checks type="checkbox" name="plugin_update_checks"
+                label.form-check-label for="plugin_update_checks": "Allow plugin updates"
+                span.form-text.d-block: "If enabled, Sunday will periodically check for updates to your installed plugins"
 
-  div.col-lg-3 > div.sticky-top.pt-4 style="top: 30px;"
-    div.card.rounded-4.shadow-sm > div.card-body
-      h6: "Sections"
-      ul.nav.flex-column.ps-2 style="list-style-type: square;"
-        li.nav-item
-          a.nav-link.text-light.p-1 href="#site-settings": "Site Settings"
-        li.nav-item
-          a.nav-link.text-light.p-1 href="#localization": "Localization"
-        li.nav-item
-          a.nav-link.text-light.p-1 href="#site-visibility": "Site Visibility"
-    @include "settings/docs"
+              div.col-lg-6 > div.card.rounded-4.shadow-sm > div.card-body > div.form-check.form-switch
+                if $this["settings"]["data"]["maintenance_mode"]:
+                  input.form-check-input#maintenance_mode type="checkbox" name="maintenance_mode" checked
+                else:
+                  input.form-check-input#maintenance_mode type="checkbox" name="maintenance_mode"
+                label.form-check-label for="maintenance_mode": "Notify on plugin updates"
+                div.row.align-items-center
+                  div.col-lg-12
+                    span.form-text.d-block: "All administrators will receive an email notification when a plugin update is available"
+          hr.my-4
+
+          div.row > div.col-12
+            h4#plugin-management.h5.mb-0: "Signing and verification"
+            p.text-muted: "Ensure the integrity and authenticity of your plugins with signing and verification settings."
+            div.row > div.col-12 > div.alert.alert-info.rounded-4: "This feature is currently in development"
+
+        div.col-lg-3 > div.sticky-top.pt-4 style="top: 30px;"
+          div.card.rounded-4.shadow-sm > div.card-body
+            h6: "Sections"
+            ul.nav.flex-column.ps-2 style="list-style-type: square;"
+              li.nav-item
+                a.nav-link.text-light.p-1 href="#plugin-updates": "Plugin Updates"
+              li.nav-item
+                a.nav-link.text-light.p-1 href="#plugin-management": "Signing & verification"
+          @include "tabs/docs"
+
+    div.sticky-bottom.rounded-bottom-4.py-3.mt-4.border-top.shadow-lg
+        style="background-color: rgba(0, 0, 0, 0); backdrop-filter: blur(8px);"
+      div.text-end.px-4
+        button.btn.btn-dark.rounded-3 type="submit": "Save Changes"

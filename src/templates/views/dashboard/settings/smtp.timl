@@ -1,32 +1,65 @@
-@include("settings/navigation")
+@include("tabs/navigation")
+
+macro settingsForm(name: string) {
+  form method="POST" action=dashboard("settings")
+    input type="hidden" name="section" value=$name
+    input type="hidden" name="csrf" value=$this["csrfToken"]
+    @statement
+}
 
 div.row > div.col-12
-  div.card.p-0.rounded-4
-    form method="POST" action=dashboard("settings")
+  @settingsForm "smtp":
+    div.card.p-0.rounded-4
       div.p-4 > div.row
         div.col-lg-9
           div.row > div.col-12
-            h4#site-settings.h5.mb-0: "SMTP Settings"
-            p.text-muted: "Configure the general settings."
+            h4#smtp-settings.h5.mb-0: "SMTP Settings"
+            p.text-muted: "Configure the SMTP settings for sending emails."
             div.row
               div.col-lg-6
                 div.mb-3
                   label.form-label: "Hostname"
-                  input.form-control type="text" name="smtp_host" value="localhost" placeholder="Enter SMTP host"
+                  input.form-control type="text" name="smtp_host" value=$this["settings"]["data"]["smtp_host"] placeholder="Enter SMTP host"
                   div.form-text: "Use <code>localhost</code> if the SMTP server is running on the same machine as Sunday."
               div.col-lg-6
                 div.mb-3
                   label.form-label: "SMTP Username"
-                  input.form-control type="text" name="smtp_username" placeholder="Enter SMTP username"
+                  input.form-control type="text" name="smtp_username" value=$this["settings"]["data"]["smtp_username"] placeholder="Enter SMTP username"
                   div.form-text: "The username for authenticating with your SMTP server. Leave blank if not required."
             div.row
               div.col-lg-6
                 div.mb-3
                   label.form-label: "SMTP Password"
-                  input.form-control type="password" name="smtp_password" placeholder="Enter SMTP password"
+                  input.form-control type="password" name="smtp_password" value=$this["settings"]["data"]["smtp_password"] placeholder="Enter SMTP password"
                   div.form-text: "The password for authenticating with your SMTP server. Leave blank if not required"
               div.col-lg-6
                 div.mb-3
                   label.form-label: "SMTP Port"
-                  input.form-control type="text" name="smtp_port" value="587" placeholder="Enter SMTP port"
+                  input.form-control type="text" name="smtp_port" value=$this["settings"]["data"]["smtp_port"] placeholder="Enter SMTP port"
                   div.form-text: "The port number your SMTP server listens on. Common ports are 25, 465 (SSL), and 587 (TLS)."
+            div.row
+              div.col-lg-6 > div.card.rounded-4.shadow-sm > div.card-body > div.form-check.form-switch
+                if $this["settings"]["data"]["smtp_secure"]:
+                  input.form-check-input#smtp_secure type="checkbox" name="smtp_secure" checked
+                else:
+                  input.form-check-input#smtp_secure type="checkbox" name="smtp_secure"
+                label.form-check-label for="smtp_secure": "Use TLS/SSL"
+                span.form-text.d-block: "Enable secure connection via TLS or SSL."
+              div.col-lg-6
+                div.mb-3
+                  label.form-label: "From Email"
+                  input.form-control type="email" name="smtp_from_email" value=$this["settings"]["data"]["smtp_from_email"] placeholder="Enter sender email"
+                  div.form-text: "The email address used as the sender for outgoing emails."
+
+      div.col-lg-3 > div.sticky-top.pt-4 style="top: 30px;"
+        div.card.rounded-4.shadow-sm > div.card-body
+          h6: "Sections"
+          ul.nav.flex-column.ps-2 style="list-style-type: square;"
+            li.nav-item
+              a.nav-link.text-light.p-1 href="#smtp-settings": "SMTP Settings"
+        @include "tabs/docs"
+
+    div.sticky-bottom.rounded-bottom-4.py-3.mt-4.border-top.shadow-lg
+        style="background-color: rgba(0, 0, 0, 0); backdrop-filter: blur(8px);"
+      div.text-end.px-4
+        button.btn.btn-dark.rounded-3 type="submit": "Save Changes"

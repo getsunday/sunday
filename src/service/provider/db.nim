@@ -99,7 +99,10 @@ initService DB[Global]:
             "site_name": "Awesome Sunday Blog",
             "site_description": "Just another blog powered by Sunday",
             "site_keywords": "blog, sunday, cms, nim, supranim",
-            "site_visibility": true
+            "site_visibility": true,
+            "default_language": "en",
+            "timezone": "UTC",
+            "maintenance_mode": false
           })
 
           putSettings("users", "User management settings", %*{
@@ -116,13 +119,18 @@ initService DB[Global]:
             "user_allow_self_deletion": false
           })
 
-          putSettings("stmp", "SMTP configuration settings", %*{
+          putSettings("smtp", "SMTP configuration settings", %*{
             "smtp_host": "localhost",
             "smtp_port": 587,
             "smtp_username": "",
             "smtp_password": "",
             "smtp_secure": false, # true for TLS/SSL, false for unencrypted
             "smtp_from_email": "noreply@website.com" # todo access this from env variable or something, since it's required for sending emails
+          })
+
+          putSettings("plugins", "Plugin management settings", %*{
+            "plugin_update_checks": true,
+            "maintenance_mode": false
           })
 
           logger("Service Database: Insert default settings into database")

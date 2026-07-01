@@ -1,7 +1,7 @@
 div.row
   div.col-12.pt-4.pb-2
     div.row
-      div.col-lg-6 > h2.mb-0: "Users"
+      div.col-lg-6 > h2.mb-0: i18n("users")
       div.col-lg-6.text-lg-end.align-self-center > div.gap-3.d-flex.justify-content-end
         a.btn.btn-outline-secondary.border-2.btn-sm.rounded-3 data-modal-target="#addUserModal": "Create User"
         a.btn.btn-primary.btn-sm.rounded-3 href=dashboard("users/roles"): "Manage User Roles"

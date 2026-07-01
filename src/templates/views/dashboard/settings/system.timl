@@ -1,4 +1,4 @@
-@include("settings/navigation")
+@include("tabs/navigation")
 div.row > div.col-12
   div.card.p-0.rounded-4
     div.p-4 > div.row
@@ -57,7 +57,7 @@ div.row > div.col-12
               a.nav-link.text-light.p-1 href="#export-and-backup": "Export & backup"
             li.nav-item
               a.nav-link.text-light.p-1 href="#memory-management": "Memory Management"
-        @include "settings/docs"
+        @include "tabs/docs"
 
 @javascript
 document.addEventListener('DOMContentLoaded', function() {

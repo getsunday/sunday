@@ -16,8 +16,10 @@ ctrl getDashboardUsers:
   ## Renders the users dashboard screen.
   withDBPool do:
     withSession do:
-      let users = Models.table(Users).select(["name", "is_confirmed", "created_at"]).getAll()
-      let flashNotifications = userSession.getNotifications("/dashboard/plugins").get(@[])
+      let users = Models.table(Users)
+                        .select(["name", "is_confirmed", "created_at"])
+                        .getAll()
+      let flashNotifications = userSession.getNotifications("/dashboard/plugins")
       render("dashboard.users.list", layout="dashboard", local = &*{
         "users": users,
         "notifications": flashNotifications,
@@ -27,7 +29,9 @@ ctrl getDashboardUsersId:
   ## Renders the user edit screen for a specific user.
   let userId = req.params["id"]
   withDBPool do:
-    let currentUser = Models.table(Users).selectAll().where("id", userId).getAll()
+    let currentUser = Models.table(Users)
+                            .selectAll().where("id", userId)
+                            .getAll()
     render("dashboard.users.edit", layout="dashboard", local = &*{
       "user": currentUser.first()
     })

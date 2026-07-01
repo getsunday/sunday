@@ -1,26 +1,34 @@
-@include("settings/navigation")
+@include("tabs/navigation")
+
 div.row > div.col-12
-  div.card.p-0.rounded-4
+  div.card.p-0.rounded-4 > form method="POST" action=dashboard("settings")
+    input type="hidden" name="section" value="users"
+    input type="hidden" name="csrf" value=$this["csrfToken"]
     div.p-4 > div.row
       div.col-lg-9
-        
         div.row > div.col-12
-          h4#registration.h5.mb-0: "Registration"
-          p.text-muted: "Control whether new users can register for an account."
+          h4#registration.h5.mb-0: i18n("registration")
+          p.text-muted: i18n("registration_lead")
           div.row
             // card for registration setting
             div.col-lg-6 > div.card.rounded-4.shadow-sm data-card-experimental="Experimental feature" > div.card-body > div.form-check.form-switch
-              input.form-check-input#site_visibility type="checkbox" name="site_visibility"
-              label.form-check-label for="site_visibility": "Allow new user registration"
-              span.form-text.d-block: "If unchecked, new users will not be able to register for an account"
+              if $this["settings"]["data"]["user_allow_registration"]:
+                input.form-check-input#allow_user_registration type="checkbox" name="allow_user_registration" checked
+              else:
+                input.form-check-input#allow_user_registration type="checkbox" name="allow_user_registration"
+              label.form-check-label for="allow_user_registration": i18n("registration_enable_label")
+              span.form-text.d-block: i18n("registration_enable_label_hint")
             
             // card for email confirmation setting
             div.col-lg-6 > div.card.rounded-4.shadow-sm  data-card-experimental="Experimental feature" > div.card-body > div.form-check.form-switch
-              input.form-check-input#maintenance_mode type="checkbox" name="maintenance_mode"
-              label.form-check-label for="maintenance_mode": "Enable confirmation email"
+              if $this["settings"]["data"]["user_require_email_confirmation"]:
+                input.form-check-input#enable_confirmation_email type="checkbox" name="enable_confirmation_email" checked
+              else:
+                input.form-check-input#enable_confirmation_email type="checkbox" name="enable_confirmation_email"
+              label.form-check-label for="enable_confirmation_email": i18n("label_enable_confirmation_email")
               div.row.align-items-center
                 div.col-lg-12
-                  span.form-text.d-block: "Whether to require new users to confirm their email address before they can log in"
+                  span.form-text.d-block: i18n("hint_enable_confirmation_email"
         hr.my-4
 
         div.row > div.col-12
@@ -30,12 +38,12 @@ div.row > div.col-12
             div.col-lg-3
               div.mb-3
                 label.form-label for="minimum_password_len": "Min password length"
-                input.form-control#minimum_password_len name="minimum_password_len" type="number" min="1" value="16"
+                input.form-control#minimum_password_len name="minimum_password_len" type="number" min="1" value=$this["settings"]["data"]["user_password_min_length"]
                 div.form-text: "The minimum number of characters required for user passwords."
             div.col-lg-3
               div.mb-3
                 label.form-label for="password_expiration_days": "Expiration (days)"
-                input.form-control#password_expiration_days name="password_expiration_days" type="number" min="0" value="0"
+                input.form-control#password_expiration_days name="password_expiration_days" type="number" min="0" value=$this["settings"]["data"]["user_password_expiration_days"]
                 div.form-text: "Number of days before a password expires. Set to 0 to disable password expiration."
             div.col-lg-6
               div.mb-3
@@ -51,16 +59,28 @@ div.row > div.col-12
           div.row > div.col-lg-12 div.card.rounded-4.shadow-sm  data-card-experimental="Experimental feature" > div.card-body > div.form-check.form-switch
             div.row
               div.col-lg-7
-                input.form-check-input#enable_twofa type="checkbox" name="enable_twofa"
+                if $this["settings"]["data"]["user_two_factor_auth"]:
+                  input.form-check-input#enable_twofa type="checkbox" name="enable_twofa" checked
+                else:
+                  input.form-check-input#enable_twofa type="checkbox" name="enable_twofa"
                 label.form-check-label for="enable_twofa": "Require two-factor authentication"
                 div.row.align-items-center
                   div.col-lg-12
                     span.form-text.d-block: "If enabled, users will be required to set up 2FA on their accounts for extra security. "
               div.col-lg-5
                 select.form-select#twofa_delivery_method name="twofa_delivery_method"
-                  option value="email": "TOTP via Email"
-                  option value="app": "TOTP via Authenticator App"
-                  option value="sms": "TOTP via SMS"
+                  if $this["settings"]["data"]["user_two_factor_auth_methods"] == "email":
+                    option value="email" selected: "TOTP via Email"
+                  else:
+                    option value="email": "TOTP via Email"
+                  if $this["settings"]["data"]["user_two_factor_auth_methods"] == "app":
+                    option value="app" selected: "TOTP via Authenticator App"
+                  else:
+                    option value="app": "TOTP via Authenticator App"
+                  if $this["settings"]["data"]["user_two_factor_auth_methods"] == "sms":
+                    option value="sms" selected: "TOTP via SMS"
+                  else:
+                    option value="sms": "TOTP via SMS"
                 div.row.align-items-center
                   div.col-lg-12
                     span.form-text.d-block: "If enabled, users will be required to set up two-factor authentication on their accounts for added security."
@@ -72,7 +92,10 @@ div.row > div.col-12
           p.text-muted: "Prevent brute-force attacks by locking accounts after a certain number of failed login attempts."
           div.row
             div.col-lg-7 > div.card.rounded-4.shadow-sm > div.card-body > div.form-check.form-switch
-              input.form-check-input#enable_account_lockout type="checkbox" name="enable_account_lockout"
+              if $this["settings"]["data"]["user_enable_account_lockout"]:
+                input.form-check-input#enable_account_lockout type="checkbox" name="enable_account_lockout" checked
+              else:
+                input.form-check-input#enable_account_lockout type="checkbox" name="enable_account_lockout"
               label.form-check-label for="enable_account_lockout": "Enable account lockout"
               div.row.align-items-center
                 div.col-lg-12
@@ -80,7 +103,7 @@ div.row > div.col-12
             div.col-lg-5
               div.mb-3
                 label.form-label for="account_lockout_threshold": "Lockout threshold"
-                input.form-control#account_lockout_threshold name="account_lockout_threshold" type="number" min="1" value="5"
+                input.form-control#account_lockout_threshold name="account_lockout_threshold" type="number" min="1" value=$this["settings"]["data"]["user_account_lockout_threshold"]
                 div.form-text: "The number of failed login attempts before an account is locked. Only applicable if account lockout is enabled."
 
         hr.my-4
@@ -90,13 +113,19 @@ div.row > div.col-12
           p.text-muted: "Allow users to deactivate or delete their accounts"
           div.row
             div.col-lg-6 > div.card.rounded-4.shadow-sm > div.card-body > div.form-check.form-switch
-              input.form-check-input#allow_account_deactivation type="checkbox" name="allow_account_deactivation"
+              if $this["settings"]["data"]["user_allow_self_deactivation"]:
+                input.form-check-input#allow_account_deactivation type="checkbox" name="allow_account_deactivation" checked
+              else:
+                input.form-check-input#allow_account_deactivation type="checkbox" name="allow_account_deactivation"
               label.form-check-label for="allow_account_deactivation": "Allow self-deactivation of accounts"
               div.row.align-items-center
                 div.col-lg-12
                   span.form-text.d-block: "Let users deactivate their own accounts from the account settings page"
             div.col-lg-6 > div.card.rounded-4.shadow-sm > div.card-body > div.form-check.form-switch
-              input.form-check-input#allow_account_deletion type="checkbox" name="allow_account_deletion"
+              if $this["settings"]["data"]["user_allow_self_deletion"]:
+                input.form-check-input#allow_account_deletion type="checkbox" name="allow_account_deletion" checked
+              else:
+                input.form-check-input#allow_account_deletion type="checkbox" name="allow_account_deletion"
               label.form-check-label for="allow_account_deletion": "Allow users to delete their own accounts"
               div.row.align-items-center
                 div.col-lg-12
@@ -116,7 +145,7 @@ div.row > div.col-12
               a.nav-link.text-light.p-1 href="#account-lockout": "Account Lockout"
             li.nav-item
               a.nav-link.text-light.p-1 href="#deactivation-and-deletion": "Deactivation and Deletion"
-        @include "settings/docs"
+        @include "tabs/docs"
 
     div.sticky-bottom.rounded-bottom-4.py-3.mt-4.border-top.shadow-lg
         style="background-color: rgba(0, 0, 0, 0); backdrop-filter: blur(8px);"

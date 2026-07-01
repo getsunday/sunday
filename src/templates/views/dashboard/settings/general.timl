@@ -1,8 +1,15 @@
-@include("settings/navigation")
+@include("tabs/navigation")
+
+macro settingsForm(name: string) {
+  form method="POST" action=dashboard("settings")
+    input type="hidden" name="section" value=$name
+    input type="hidden" name="csrf" value=$this["csrfToken"]
+    @statement
+}
 
 div.row > div.col-12
-  div.card.p-0.rounded-4
-    form method="POST" action=dashboard("settings")
+  @settingsForm "general":
+    div.card.p-0.rounded-4
       div.p-4 > div.row
         div.col-lg-9
           div.row > div.col-12
@@ -51,7 +58,10 @@ div.row > div.col-12
                   label.form-label for="timezone": "Timezone"
                   select.form-select#timezone name="timezone"
                     for $tz in $this["settings"]["timezones"]:
-                      option value=$tz: $tz
+                      if $tz == $this["settings"]["data"]["timezone"]:
+                        option value=$tz selected: $tz
+                      else:
+                        option value=$tz: $tz
                   div.form-text: "The default timezone. This will be used for displaying dates and times."
 
           hr.my-4
@@ -62,11 +72,17 @@ div.row > div.col-12
             p.text-muted: "Control whether your site is publicly accessible or private."
             div.row
               div.col-lg-6 > div.card.rounded-4.shadow-sm data-card-experimental="Experimental feature" > div.card-body > div.form-check.form-switch
-                input.form-check-input#site_visibility type="checkbox" name="site_visibility" checked
+                if $this["settings"]["data"]["site_visibility"]:
+                  input.form-check-input#site_visibility type="checkbox" name="site_visibility" checked
+                else:
+                  input.form-check-input#site_visibility type="checkbox" name="site_visibility"
                 label.form-check-label for="site_visibility": "Make site publicly accessible"
                 div.form-text.d-block: "If unchecked, only registered users will be able to access the site"
               div.col-lg-6 > div.card.rounded-4.shadow-sm  data-card-experimental="Experimental feature" > div.card-body > div.form-check.form-switch
-                input.form-check-input#maintenance_mode type="checkbox" name="maintenance_mode"
+                if $this["settings"]["data"]["maintenance_mode"]:
+                  input.form-check-input#maintenance_mode type="checkbox" name="maintenance_mode" checked
+                else:
+                  input.form-check-input#maintenance_mode type="checkbox" name="maintenance_mode"
                 label.form-check-label for="maintenance_mode": "Enable maintenance mode"
                 div.row.align-items-center
                   div.col-lg-8
@@ -85,7 +101,7 @@ div.row > div.col-12
                 a.nav-link.text-light.p-1 href="#localization": "Localization"
               li.nav-item
                 a.nav-link.text-light.p-1 href="#site-visibility": "Site Visibility"
-          @include "settings/docs"
+          @include "tabs/docs"
 
       div.sticky-bottom.rounded-bottom-4.py-3.mt-4.border-top.shadow-lg
           style="background-color: rgba(0, 0, 0, 0); backdrop-filter: blur(8px);"

@@ -121,7 +121,7 @@ listener "account.register":
           "sk": sk,
           "sign_pk": signPk,
           "sign_sk": signSk,
-          "totp_secret": twofa.genTotpUri(totpSecret.toHex(), "MyApp", "MyCompany"),
+          # "totp_secret": twofa.genTotpUri(totpSecret.toHex(), "MyApp", "MyCompany"),
           "password": auth.hashPassword(fields[1]),
           "created_at": $(now())
         }).execGet()

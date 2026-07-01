@@ -38,7 +38,7 @@ routes do:
       get "/users/roles"
 
       # Settings routes
-      get "/settings"
+      (get, post) -> "/settings"
       get "/settings/stats"
       
       post "/settings/freememory"

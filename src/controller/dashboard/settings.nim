@@ -45,46 +45,169 @@ ctrl getDashboardSettings:
         "label": "System"
       }
     ]
-    if req.getQuery != nil:
-      if req.getQuery.hasKey("tab") and req.getQuery["tab"] != "general":
-        if req.getQuery["tab"] == "system":
-          render("dashboard.settings.system", layout="dashboard", local = &*{
-            "tabs": tabs
-          })
-        elif req.getQuery["tab"] == "users":
-          render("dashboard.settings.users", layout="dashboard", local = &*{
-            "tabs": tabs
-          })
-        elif req.getQuery["tab"] == "plugins":
-          render("dashboard.settings.plugins", layout="dashboard", local = &*{
-            "tabs": tabs
-          })
-        elif req.getQuery["tab"] == "smtp":
-          render("dashboard.settings.smtp", layout="dashboard", local = &*{
-            "tabs": tabs
-          })
-        else:
-          render("errors.4xx", layout="dashboard")
+    withSession do:
+      if req.getQuery != nil:
+        if req.getQuery.hasKey("tab") and req.getQuery["tab"] != "general":
+          if req.getQuery["tab"] == "system":
+            render("dashboard.settings.system", layout="dashboard", local = &*{
+              "tabs": tabs,
+              "page_title": "Settings",
+              "page_slug": "settings",
+              "notifications": userSession.getNotifications("/dashboard/settings"),
+              "csrfToken": userSession.genCSRF("/dashboard/settings?tab=system")
+            })
+          elif req.getQuery["tab"] == "users":
+            let usersSettings = Models.table(Settings).selectAll()
+                                        .where("tab", "users")
+                                        .getAll()
+            if likely(usersSettings.isEmpty == false):
+              let data = usersSettings.first()
+              render("dashboard.settings.users", layout="dashboard", local = &*{
+                "tabs": tabs,
+                "page_title": "Settings",
+                "page_slug": "settings",
+                "notifications": userSession.getNotifications("/dashboard/settings?tab=users"),
+                "csrfToken": userSession.genCSRF("/dashboard/settings?tab=users"),
+                "settings": {
+                  "tab": data.getTab(),
+                  "description": data.getDescription(),
+                  "data": fromJson(data.getData())
+                }
+              })
+            else:
+              render("errors.5xx")
+          elif req.getQuery["tab"] == "plugins":
+            let pluginsSettings = Models.table(Settings).selectAll()
+                                          .where("tab", "plugins")
+                                          .getAll()
+            if likely(pluginsSettings.isEmpty == false):
+              let data = pluginsSettings.first()
+              render("dashboard.settings.plugins", layout="dashboard", local = &*{
+                "tabs": tabs,
+                "page_title": "Settings",
+                "page_slug": "settings",
+                "notifications": userSession.getNotifications("/dashboard/settings?tab=plugins"),
+                "csrfToken": userSession.genCSRF("/dashboard/settings?tab=plugins"),
+                "settings": {
+                  "tab": data.getTab(),
+                  "description": data.getDescription(),
+                  "data": fromJson(data.getData())
+                }
+              })
+            else:
+              render("errors.5xx")
+          elif req.getQuery["tab"] == "smtp":
+            let smtpSettings = Models.table(Settings).selectAll()
+                                       .where("tab", "smtp")
+                                       .getAll()
+            if likely(smtpSettings.isEmpty == false):
+              let data = smtpSettings.first()
+              render("dashboard.settings.smtp", layout="dashboard", local = &*{
+                "tabs": tabs,
+                "page_title": "Settings",
+                "page_slug": "settings",
+                "notifications": userSession.getNotifications("/dashboard/settings?tab=smtp"),
+                "csrfToken": userSession.genCSRF("/dashboard/settings?tab=smtp"),
+                "settings": {
+                  "tab": data.getTab(),
+                  "description": data.getDescription(),
+                  "data": fromJson(data.getData())
+                }
+              })
+            else:
+              render("errors.5xx")
+          else:
+            render("errors.4xx", layout="dashboard")
 
-    # the `general` settings tab is the default view
-    # for the settings dashboard and includes general application settings
-    let settings = Models.table(Settings).selectAll()
-                         .where("tab", "general")
-                         .getAll()
-    if likely(settings.isEmpty == false):
-      let data = settings.first()
-      render("dashboard.settings.general",
-          layout="dashboard", local = &*{
-            "tabs": tabs,
-            "settings": {
-              "tab": data.getTab(),
-              "description": data.getDescription(),
-              "data": fromJson(data.getData()),
-              "timezones": timezones
-            }
-          })
-    else:
-      render("errors.5xx")
+      # the `general` settings tab is the default view
+      # for the settings dashboard and includes general application settings
+      let settings = Models.table(Settings).selectAll()
+                          .where("tab", "general")
+                          .getAll()
+      if likely(settings.isEmpty == false):
+        let data = settings.first()
+        render("dashboard.settings.general", layout="dashboard", local = &*{
+          "page_title": "Settings",
+          "page_slug": "settings",
+          "csrfToken": userSession.genCSRF("/dashboard/settings"),
+          "notifications": userSession.getNotifications("/dashboard/settings?tab=general"),
+          "tabs": tabs,
+          "settings": {
+            "tab": data.getTab(),
+            "description": data.getDescription(),
+            "data": fromJson(data.getData()),
+            "timezones": timezones
+          }
+        })
+      else:
+        render("errors.5xx")
+
+ctrl postDashboardSettings:
+  ## POST handler for updating settings pages.
+  withSession do:
+    withBag req.getFields:
+      section -> callback do(input: string) -> bool:
+        result = input in ["general", "users", "smtp", "plugins"]
+      csrf -> callback do(input: string) -> bool:
+        result = userSession.validateCSRF("/dashboard/settings", input)
+
+    let fieldsTable = req.getFieldsTable()
+    if fieldsTable.isNone:
+      userSession.notify("Invalid form data", some("/dashboard/settings"))
+      go getDashboardSettings
+
+    let fields = fieldsTable.get()
+    let section = fields.getOrDefault("section", "")
+
+    withDBPool do:
+      case section
+      of "general":
+        updateSettings("general", "General application settings", %*{
+          "site_name": fields.getOrDefault("site_name", ""),
+          "site_description": fields.getOrDefault("site_description", ""),
+          "site_keywords": fields.getOrDefault("site_keywords", ""),
+          "site_visibility": fields.hasKey("site_visibility"),
+          "default_language": fields.getOrDefault("default_language", "en"),
+          "timezone": fields.getOrDefault("timezone", "UTC"),
+          "maintenance_mode": fields.hasKey("maintenance_mode")
+        })
+      of "users":
+        let minPassLen = try: parseInt(fields.getOrDefault("minimum_password_len", "8")) except: 8
+        let passExpDays = try: parseInt(fields.getOrDefault("password_expiration_days", "0")) except: 0
+        let lockoutThreshold = try: parseInt(fields.getOrDefault("account_lockout_threshold", "5")) except: 5
+        updateSettings("users", "User management settings", %*{
+          "user_allow_registration": fields.hasKey("allow_user_registration"),
+          "user_require_email_confirmation": fields.hasKey("enable_confirmation_email"),
+          "user_password_min_length": minPassLen,
+          "user_password_expiration_days": passExpDays,
+          "user_two_factor_auth": fields.hasKey("enable_twofa"),
+          "user_two_factor_auth_methods": fields.getOrDefault("twofa_delivery_method", "authenticator"),
+          "user_enable_account_lockout": fields.hasKey("enable_account_lockout"),
+          "user_account_lockout_threshold": lockoutThreshold,
+          "user_allow_self_deactivation": fields.hasKey("allow_account_deactivation"),
+          "user_allow_self_deletion": fields.hasKey("allow_account_deletion")
+        })
+      of "smtp":
+        let smtpPort = try: parseInt(fields.getOrDefault("smtp_port", "587")) except: 587
+        updateSettings("smtp", "SMTP configuration settings", %*{
+          "smtp_host": fields.getOrDefault("smtp_host", "localhost"),
+          "smtp_port": smtpPort,
+          "smtp_username": fields.getOrDefault("smtp_username", ""),
+          "smtp_password": fields.getOrDefault("smtp_password", ""),
+          "smtp_secure": fields.hasKey("smtp_secure"),
+          "smtp_from_email": fields.getOrDefault("smtp_from_email", "")
+        })
+      of "plugins":
+        updateSettings("plugins", "Plugin management settings", %*{
+          "plugin_update_checks": fields.hasKey("plugin_update_checks"),
+          "maintenance_mode": fields.hasKey("maintenance_mode")
+        })
+      else:
+        userSession.notify("Invalid settings section", some("/dashboard/settings?tab=" & section))
+        go getDashboardSettings, [("tab", section)]
+
+    userSession.notify("Settings updated successfully.", some("/dashboard/settings?tab=" & section))
+    go getDashboardSettings, [("tab", section)]
 
 ctrl postDashboardSettingsFreeMemory:
   ## POST handler for triggering the release of unused memory back to the OS
@@ -148,9 +271,6 @@ ctrl postDashboardSettingsBackup:
     json(%*{"msg": "Failed to create backup zip file."})
   
   req.sendDownloadable(tempZip, res.headers)
-
-ctrl postDashboardSettingsUpdate:
-  ## POST handler for 
 
 ctrl getDashboardSettingsUsers:
   ## Renders the users settings dashboard screen.
