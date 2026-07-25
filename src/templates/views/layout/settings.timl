@@ -1,0 +1,73 @@
+@include("tabs/navigation")
+
+macro renderField(field: json) =
+  const nimtype = toString($field["nimtype"])
+  const model = toString($field["model"])
+  const label = toString($field["label"])
+  const desc = toString($field["description"])
+  div.mb-3
+    if $nimtype == "bool":
+      if $this["settings"]["data"][$model]:
+        input.form-check-input type="checkbox" name=$model checked
+        label.form-check-label: $label
+      else:
+        input.form-check-input type="checkbox" name=$model
+        label.form-check-label: $label
+    elif $nimtype == "text":
+      label.form-label: $label
+      textarea.form-control name=$model rows="4"
+    elif $nimtype == "int4" or $nimtype == "int8" or $nimtype == "int" or $nimtype == "serial" or $nimtype == "float4" or $nimtype == "float8" or $nimtype == "float":
+      label.form-label: $label
+      input.form-control type="number" name=$model
+    else:
+      label.form-label: $label
+      input.form-control type="text" name=$model
+    if len($desc) > 0:
+      div.form-text: $desc
+
+div.row > div.col-12
+  form method="POST" action=dashboard("settings")
+    input type="hidden" name="section" value=$this["section"]
+    input type="hidden" name="csrf" value=$this["csrfToken"]
+    div.card.p-0.rounded-4
+      div.p-4 > div.row
+        for $node in $this["layout"]:
+          if $node["type"] == "columns":
+            div.row
+              const colSize = 12 / $node["size"]
+              for $col in $node["children"]:
+                div class="col-lg-" & $colSize
+                  for $item in $col["children"]:
+                    @renderField($item)
+          elif $node["type"] == "section":
+            hr.my-4
+            if len(toString($node["label"])) > 0:
+              h5.h5.mb-0: $node["label"]
+            for $child in $node["children"]:
+              @renderField($child)
+          elif $node["type"] == "field":
+            @renderField($node)
+          elif $node["type"] == "divider":
+            hr.my-4
+          elif $node["type"] == "alert":
+            const alertStyle = toString($node["style"])
+            if len($alertStyle) > 0:
+              div class="alert alert-" & $alertStyle: $node["text"]
+            else:
+              div.alert.alert-info: $node["text"]
+          elif $node["type"] == "card":
+            div.card.p-0.rounded-4 > div.p-4
+              for $child in $node["children"]:
+                @renderField($child)
+      div.sticky-bottom.rounded-bottom-4.py-3.mt-4.border-top.shadow-lg style="background-color: rgba(0, 0, 0, 0); backdrop-filter: blur(8px);"
+        div.text-end.px-4
+          for $node in $this["layout"]:
+            if $node["type"] == "actions":
+              for $btn in $node["children"]:
+                const btnLabel = toString($btn["label"])
+                if len($btnLabel) > 0:
+                  const btnClass =
+                    if $btn.hasKey("class") and len(toString($btn["class"])) > 0: toString($btn["class"])
+                    else: "btn.btn-dark.rounded-3"
+                  button class=$btnClass type="submit": $btnLabel
+          button.btn.btn-dark.rounded-3 type="submit": "Save Changes"

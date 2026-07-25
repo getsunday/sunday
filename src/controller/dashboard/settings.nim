@@ -20,127 +20,124 @@ let timezones = [
   "Greenwich", "Universal", "UCT", "Zulu", "GMT0", "UTC"
 ]
 
+proc getPluginTabMeta: (JsonNode, JsonNode) =
+  ## Queries plugin settings tab metadata from DB.
+  ## Returns (tabsArray, metaBySlug) where metaBySlug is a JSON object
+  ## mapping slug -> tab metadata for O(1) lookup.
+  var tabs = newJArray()
+  var bySlug = newJObject()
+  withDBPool do:
+    let plugins = Models.rawSQL("SELECT id, settings_schema FROM plugins").getWith(Plugins)
+    for plugin in plugins:
+      let settings = plugin.getSettingsSchema()
+      if settings.len == 0: continue
+      let schema = parseJson(settings)
+      if not schema.hasKey("settings") or not schema["settings"].hasKey("tabs"): continue
+      for tab in schema["settings"]["tabs"]:
+        let slug = tab["slug"].getStr()
+        tabs.add(%*{"name": slug, "label": tab["label"]})
+        bySlug[slug] = %*{
+          "layout": tab["layout"],
+          "fields": tab["fields"],
+          "model": tab["model"]
+        }
+  (tabs, bySlug)
+
 ctrl getDashboardSettings:
   ## Renders the users settings dashboard screen.
   withDBPool do:
+    let (pluginTabs, pluginMeta) = getPluginTabMeta()
     let tabs = %*[
-      {
-        "name": "general",
-        "label": "General"
-      },
-      {
-        "name": "users",
-        "label": "Users"
-      },
-      {
-        "name": "plugins",
-        "label": "Plugins"
-      },
-      {
-        "name": "smtp",
-        "label": "SMTP"
-      },
-      {
-        "name": "system",
-        "label": "System"
-      }
+      {"name": "general", "label": "General"},
+      {"name": "users",   "label": "Users"},
+      {"name": "plugins", "label": "Plugins"},
+      {"name": "smtp",    "label": "SMTP"},
+      {"name": "system",  "label": "System"}
     ]
+    for pt in pluginTabs:
+      tabs.add(pt)
+
     withSession do:
       if req.getQuery != nil:
         if req.getQuery.hasKey("tab") and req.getQuery["tab"] != "general":
-          if req.getQuery["tab"] == "system":
+          let slug = req.getQuery["tab"]
+          if slug == "system":
             render("dashboard.settings.system", layout="dashboard", local = &*{
-              "tabs": tabs,
-              "page_title": "Settings",
-              "page_slug": "settings",
+              "tabs": tabs, "page_title": "Settings", "page_slug": "settings",
               "notifications": userSession.getNotifications("/dashboard/settings"),
               "csrfToken": userSession.genCSRF("/dashboard/settings?tab=system")
             })
-          elif req.getQuery["tab"] == "users":
+          elif slug == "users":
             let usersSettings = Models.table(Settings).selectAll()
-                                        .where("tab", "users")
-                                        .getAll()
+                                        .where("tab", "users").getAll()
             if likely(usersSettings.isEmpty == false):
               let data = usersSettings.first()
               render("dashboard.settings.users", layout="dashboard", local = &*{
-                "tabs": tabs,
-                "page_title": "Settings",
-                "page_slug": "settings",
+                "tabs": tabs, "page_title": "Settings", "page_slug": "settings",
                 "notifications": userSession.getNotifications("/dashboard/settings?tab=users"),
                 "csrfToken": userSession.genCSRF("/dashboard/settings?tab=users"),
-                "settings": {
-                  "tab": data.getTab(),
-                  "description": data.getDescription(),
-                  "data": fromJson(data.getData())
-                }
+                "settings": {"tab": data.getTab(), "description": data.getDescription(),
+                             "data": fromJson(data.getData())}
               })
-            else:
-              render("errors.5xx")
-          elif req.getQuery["tab"] == "plugins":
+            else: render("errors.5xx")
+          elif slug == "plugins":
             let pluginsSettings = Models.table(Settings).selectAll()
-                                          .where("tab", "plugins")
-                                          .getAll()
+                                          .where("tab", "plugins").getAll()
             if likely(pluginsSettings.isEmpty == false):
               let data = pluginsSettings.first()
               render("dashboard.settings.plugins", layout="dashboard", local = &*{
-                "tabs": tabs,
-                "page_title": "Settings",
-                "page_slug": "settings",
+                "tabs": tabs, "page_title": "Settings", "page_slug": "settings",
                 "notifications": userSession.getNotifications("/dashboard/settings?tab=plugins"),
                 "csrfToken": userSession.genCSRF("/dashboard/settings?tab=plugins"),
-                "settings": {
-                  "tab": data.getTab(),
-                  "description": data.getDescription(),
-                  "data": fromJson(data.getData())
-                }
+                "settings": {"tab": data.getTab(), "description": data.getDescription(),
+                             "data": fromJson(data.getData())}
               })
-            else:
-              render("errors.5xx")
-          elif req.getQuery["tab"] == "smtp":
+            else: render("errors.5xx")
+          elif slug == "smtp":
             let smtpSettings = Models.table(Settings).selectAll()
-                                       .where("tab", "smtp")
-                                       .getAll()
+                                       .where("tab", "smtp").getAll()
             if likely(smtpSettings.isEmpty == false):
               let data = smtpSettings.first()
               render("dashboard.settings.smtp", layout="dashboard", local = &*{
-                "tabs": tabs,
-                "page_title": "Settings",
-                "page_slug": "settings",
+                "tabs": tabs, "page_title": "Settings", "page_slug": "settings",
                 "notifications": userSession.getNotifications("/dashboard/settings?tab=smtp"),
                 "csrfToken": userSession.genCSRF("/dashboard/settings?tab=smtp"),
-                "settings": {
-                  "tab": data.getTab(),
-                  "description": data.getDescription(),
-                  "data": fromJson(data.getData())
-                }
+                "settings": {"tab": data.getTab(), "description": data.getDescription(),
+                             "data": fromJson(data.getData())}
               })
-            else:
-              render("errors.5xx")
+            else: render("errors.5xx")
+          elif pluginMeta.hasKey(slug):
+            let meta = pluginMeta[slug]
+            let record = Models.table(Settings).selectAll()
+                                .where("tab", slug).getAll()
+            if likely(record.isEmpty == false):
+              let data = record.first()
+              render("layout/settings", layout="dashboard", local = &*{
+                "tabs": tabs, "page_title": "Settings", "page_slug": "settings",
+                "section": slug,
+                "csrfToken": userSession.genCSRF("/dashboard/settings?tab=" & slug),
+                "notifications": userSession.getNotifications("/dashboard/settings?tab=" & slug),
+                "layout": meta["layout"],
+                "settings": {"data": fromJson(data.getData())}
+              })
+            else: render("errors.5xx")
           else:
             render("errors.4xx", layout="dashboard")
 
-      # the `general` settings tab is the default view
-      # for the settings dashboard and includes general application settings
+      # default: general tab
       let settings = Models.table(Settings).selectAll()
-                          .where("tab", "general")
-                          .getAll()
+                          .where("tab", "general").getAll()
       if likely(settings.isEmpty == false):
         let data = settings.first()
         render("dashboard.settings.general", layout="dashboard", local = &*{
-          "page_title": "Settings",
-          "page_slug": "settings",
+          "page_title": "Settings", "page_slug": "settings",
           "csrfToken": userSession.genCSRF("/dashboard/settings"),
           "notifications": userSession.getNotifications("/dashboard/settings?tab=general"),
           "tabs": tabs,
-          "settings": {
-            "tab": data.getTab(),
-            "description": data.getDescription(),
-            "data": fromJson(data.getData()),
-            "timezones": timezones
-          }
+          "settings": {"tab": data.getTab(), "description": data.getDescription(),
+                       "data": fromJson(data.getData()), "timezones": timezones}
         })
-      else:
-        render("errors.5xx")
+      else: render("errors.5xx")
 
 ctrl postDashboardSettings:
   ## POST handler for updating settings pages.
@@ -203,8 +200,12 @@ ctrl postDashboardSettings:
           "maintenance_mode": fields.hasKey("maintenance_mode")
         })
       else:
-        userSession.notify("Invalid settings section", some("/dashboard/settings?tab=" & section))
-        go getDashboardSettings, [("tab", section)]
+        # Plugin settings tab (slug = UUID)
+        var data = newJObject()
+        for key, val in fields.pairs:
+          if key notin ["section", "csrf"]:
+            data[key] = %val
+        updateSettings(section, "Plugin settings", data)
 
     userSession.notify("Settings updated successfully.", some("/dashboard/settings?tab=" & section))
     go getDashboardSettings, [("tab", section)]

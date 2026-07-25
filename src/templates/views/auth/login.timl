@@ -1,6 +1,7 @@
 macro showNotifications() =
   for $msg in $this["notifications"]:
-    div.alert.alert-danger.border-0 > p.mb-0: $msg
+    div.alert.alert-info.border-0 > p.mb-0: $msg
+
 div.row.align-items-center.vh-100
   div.col-xl-8.col-md-8.col-11.mx-auto > div.card.p-0.rounded-4.overflow-hidden > div.row.h-100
     div.col-lg-7 > div.p-5.my-5 > div.p-5

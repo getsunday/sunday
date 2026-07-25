@@ -1,4 +1,20 @@
-import TipTapEditor from './editor.js'
+/**
+ * Sunday Publishing Platform — TipTap Draggable Extension
+ * 
+ * Copyright (c) 2026 George Lemon. All rights reserved.
+ * 
+ * Sunday is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License (AGPLv3)
+ * as published by the Free Software Foundation.
+ *
+ * For more information, documentation, and contributing:
+ * 👉 https://github.com/openpeeps/sunday
+ */
+
+import SundayEditor from './modules/SundayEditor.js'
+import MultiModalManager from './modules/MultiModalManager.js'
+import GroupedDragDrop from './modules/StupidDragDrop.js'
+export {MultiModalManager, GroupedDragDrop}
 
 export const Editor = {
   init: (data, postId) => {
@@ -6,7 +22,7 @@ export const Editor = {
     let inputTitleElement = document.querySelector('#form-action-title')
     let currentPath = window.location.pathname;
     if(!editorSelector || !inputTitleElement) return;
-    let Editor = new TipTapEditor({
+    let Editor = new SundayEditor({
       target: editorSelector,
       inputTitleElement: inputTitleElement,
       saveButtonCallback: (editor, toolbar, inputTitle) => {

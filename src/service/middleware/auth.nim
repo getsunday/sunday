@@ -24,7 +24,7 @@ newMiddleware membership:
   ## Checks if the user is authenticated and has an active
   ## membership. If not, redirects to the login page.
   withDBPool do:
-    let currentSettings = Models.table(Settings).selectAll().getAll().first()
+    let currentSettings = Models.table(Settings).selectAll().where("tab", "general").getAll().first()
     let settings = fromJson(currentSettings.getData())
     if settings["site_visibility"].getBool():
       next() # continue to the next middleware

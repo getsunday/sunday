@@ -17,9 +17,9 @@ routes do:
       get "/"
 
       # Media routes
-      get "/media"
-      (get, post) -> "/media/upload"
-      (get, delete) -> "/media/{id:id}"
+      # get "/media"
+      # (get, post) -> "/media/upload"
+      # (get, delete) -> "/media/{id:id}"
 
       # Plugins routes
       get "/plugins"

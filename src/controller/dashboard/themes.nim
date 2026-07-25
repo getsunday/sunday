@@ -14,7 +14,24 @@ import ../../service/provider/[db, session, tim]
 
 ctrl getDashboardThemes:
   ## Handles GET requests to the `/dashboard/themes`
-  render("dashboard.themes.list")
+  render("dashboard.themes.list", layout="dashboard", local = &*{
+    "themes": [
+      {
+        "name": "Default Theme",
+        "version": "1.0.0",
+        "author": "OpenPeeps",
+        "description": "The default theme for Sunday.",
+        "active": true
+      },
+      {
+        "name": "Dark Mode",
+        "version": "1.2.3",
+        "author": "Jane Doe",
+        "description": "A sleek dark mode theme.",
+        "active": false
+      }
+    ]
+  })
 
 ctrl postDashboardThemesManage:
   ## Handles POST requests to `/dashboard/themes/manage`

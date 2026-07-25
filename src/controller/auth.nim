@@ -18,7 +18,7 @@ import pkg/supranim_session/controller/[login, register, forgot]
 
 ctrl getAuthLogin:
   ## GET handler renders authentication page
-  login.getLogin(getAccount)
+  login.getLogin(getDashboard)
 
 ctrl postAuthLogin:
   ## POST handle authentication requests
@@ -47,11 +47,15 @@ ctrl getAuthLogout:
 
 ctrl getAuthRegister:
   ## GET handle for rendering the registration page
-  register.getRegister()
+  register.getRegister() # todo expose cached settings
 
 ctrl postAuthRegister:
   ## POST handle for registering a new user
-  register.postRegister()
+  register.postRegister(preHook = block:
+    userSession.notify("New user registration is currently unavailable. Please contact the site administrator to request an account.", some("/auth/login"))
+    go(getAuthLogin),
+    postHook = block: discard
+  )
 
 ctrl getAuth:
   ## GET handler for `/auth` route

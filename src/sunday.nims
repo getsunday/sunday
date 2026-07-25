@@ -15,6 +15,7 @@ elif defined(linux):
   --passC:"-I /usr/include"
 
 --define:supraNative
+--define:vancodeJitDynasm
 --mm:atomicArc
 --deepcopy:on
 --define:webapp # todo supWebApp

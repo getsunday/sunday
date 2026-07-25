@@ -13,7 +13,8 @@ div.row > div.col-12.pt-4
         for $tab in $this["tabs"]:
           const currTab = toString($tab["name"])
           li.nav-item
-            if $currTab == $currentTab or len($currentTab) == 0 and $currTab == $this["tabs"][0]["name"]:
+            if $currTab == $currentTab or len($currentTab) == 0 and
+                    $currTab == $this["tabs"][0]["name"]:
               a.nav-link.active.fw-normal href=dashboard($this["page_slug"] & "?tab=" & $tab["name"]): $tab["label"]
             else:
               a.nav-link href=dashboard($this["page_slug"] & "?tab=" & $tab["name"]): $tab["label"]

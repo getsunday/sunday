@@ -50,7 +50,7 @@ div.row > div.col-12
                 a.nav-link.text-light.p-1 href="#plugin-management": "Signing & verification"
           @include "tabs/docs"
 
-    div.sticky-bottom.rounded-bottom-4.py-3.mt-4.border-top.shadow-lg
-        style="background-color: rgba(0, 0, 0, 0); backdrop-filter: blur(8px);"
-      div.text-end.px-4
-        button.btn.btn-dark.rounded-3 type="submit": "Save Changes"
+      div.sticky-bottom.rounded-bottom-4.py-3.mt-4.border-top.shadow-lg
+          style="background-color: rgba(0, 0, 0, 0); backdrop-filter: blur(8px);"
+        div.text-end.px-4
+          button.btn.btn-dark.rounded-3 type="submit": "Save Changes"

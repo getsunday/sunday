@@ -85,6 +85,7 @@ listener "account.password.request":
         # TODO send the password reset link to the user email address using the configured email provider
         discard
 
+
 listener "account.register":
   ## Event listener for registering a new user account.
   ## 
@@ -103,13 +104,13 @@ listener "account.register":
                           .select("id")
                           .where("email", fields[0])
                           .getAll()
-      
+
       # check if the user already exists
       # if so, abort the registration process
       if anyUser.isEmpty() == false: return
-
+      
       # otherwise, create a new user account and store it in the database.
-      let (pk, sk) = auth.boxKeys()         # X25519 keys (hex) required for E2EE features like encrypted notes, files, etc.
+      let (pk, sk) = auth.boxKeys()          # X25519 keys (hex) required for E2EE features like encrypted notes, files, etc.
       let (signPk, signSk) = auth.signKeys() # Ed25519 keys (hex) required for signing messages, generating TOTP secrets, etc.
       # sign it with the user secret key to gen a unique totp secret for the user account
       let totpSecret = sign(signSk.secretKeyFromHex(), generateSalt(16).toHex())
