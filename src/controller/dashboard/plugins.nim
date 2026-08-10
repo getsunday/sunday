@@ -6,7 +6,7 @@
 #     https://github.com/openpeeps/sunday
 
 import std/[os, strutils, times, tables]
-import pkg/[bag, pluginkit, tim]
+import pkg/[bag, pluginkit, tim, marvdown]
 import pkg/ozark/driver/psql
 
 import pkg/ozark/runtimequery
@@ -50,12 +50,13 @@ ctrl getDashboardPlugins:
           "plugins": [],
           "notifications": notifications,
           "permission_icons": {
-            "filesystem": $icon("device-floppy"),
-            "database": $icon("database"),
-            "template": $icon("template"),
-            "event": $icon("calendar-event"),
-            "middleware": $icon("keyframe-align-center"),
-            "settings": $icon("settings"),
+            "reqDBFullAccess": $icon("database"),
+            "reqDBReadOnly": $icon("database"),
+            "reqDBWriteOnly": $icon("database"),
+            "reqEvents": $icon("calendar-event"),
+            "reqRoutes": $icon("keyframe-align-center"),
+            "reqAccessConfig": $icon("settings"),
+            "reqAccessSessions": $icon("user-circle"),
           }
         })
       else:
@@ -63,6 +64,7 @@ ctrl getDashboardPlugins:
           render("errors.4xx") # todo make a custom 4xx error page for invalid tabs
         else:
           var availablePlugins: seq[JsonNode]
+          var pluginDetails = newJObject()
           for plugin in pluginManager().manager.plugins():
             let exists = Models.table(Plugins)
                               .select(["id", "status"])
@@ -77,8 +79,14 @@ ctrl getDashboardPlugins:
                 $(plugin.getStatus())
               else:
                 "pluginStatusInstalled"
+            var permNames: seq[string]
+            for p in plugin.getPermissions():
+              permNames.add($p)
+            let readmeMD = plugin.staticTemplates.getOrDefault("readme.md", "")
+            let changelogMD = plugin.staticTemplates.getOrDefault("changelog.md", "")
+            let pluginId = plugin.getId()
             availablePlugins.add(%*{
-              "id": plugin.getId(),
+              "id": pluginId,
               "status": pluginStatus,
               "name": plugin.getName(),
               "author": plugin.getAuthor(),
@@ -87,6 +95,18 @@ ctrl getDashboardPlugins:
               "license": plugin.getLicense(),
               "url": plugin.getUrl(),
             })
+            pluginDetails[pluginId] = %*{
+              "name": plugin.getName(),
+              "description": plugin.getDescription(),
+              "version": plugin.getVersion(),
+              "license": plugin.getLicense(),
+              "author": plugin.getAuthor(),
+              "url": plugin.getUrl(),
+              "nimversion": plugin.getNimVersion(),
+              "permissions": permNames,
+              "readme": toHtml(readmeMD),
+              "changelog": toHtml(changelogMD),
+            }
 
           let flashNotifications = userSession.getNotifications("/dashboard/plugins")
           render("dashboard.plugins.list", layout="dashboard", local = &*{
@@ -94,24 +114,28 @@ ctrl getDashboardPlugins:
             "page_slug": "plugins",
             "tabs": tabs,
             "plugins": availablePlugins,
+            "pluginDetails": pluginDetails,
             "notifications": flashNotifications,
             "permission_icons": {
-              "filesystem": $icon("device-floppy"),
-              "database": $icon("database"),
-              "template": $icon("template"),
-              "event": $icon("calendar-event"),
-              "middleware": $icon("keyframe-align-center"),
-              "settings": $icon("settings"),
+              "reqDBFullAccess": $icon("database"),
+              "reqDBReadOnly": $icon("database"),
+              "reqDBWriteOnly": $icon("database"),
+              "reqEvents": $icon("calendar-event"),
+              "reqRoutes": $icon("keyframe-align-center"),
+              "reqAccessConfig": $icon("settings"),
+              "reqAccessSessions": $icon("user-circle"),
             }
           })
 
 ctrl postDashboardPluginsManageCsrf:
   ## POST handler for fetching a new CSRF token for plugin management actions
   withSession do:
-    let id = req.params["nanoid"]
-    if pluginManager().manager.hasPlugin(id):
-      let token = userSession.genCSRF("/plugins/" & id & "/manage")
-      json(%*{"token": token})
+    let body = req.getBodyData(JsonNode)
+    if body.isSome and body.get().hasKey("plugin_id"):
+      let id = body.get()["plugin_id"].getStr()
+      if pluginManager().manager.hasPlugin(id):
+        let token = userSession.genCSRF("/plugins/" & id & "/manage")
+        json(%*{"token": token})
   json(%*{"error": "Plugin not found"}, code = HttpCode(404))
 
 ctrl postDashboardPluginsManage:

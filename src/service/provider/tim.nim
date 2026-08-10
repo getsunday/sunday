@@ -13,7 +13,7 @@ import pkg/supranim/support/slug
 import pkg/supranim/core/[services, application, paths]
 import pkg/vancode/interpreter/value
 
-import pkg/[tim, iconim]
+import pkg/[tim, iconim, marvdown]
 import pkg/kapsis/interactive/prompts
 
 import ./logger, ./locales
@@ -100,6 +100,16 @@ initService Tim[Global]:
           proc (args: StackView, argc: int): value.Value =
             # A helper to translate a key using the I18n service
             return initValue(i18n().translate(args[0].stringVal[]))
+          )
+
+        timBackend.userScript.addProc("parseMarkdown", @[paramDef("md", ttyString)], ttyString,
+          proc (args: StackView, argc: int): value.Value =
+            return initValue(toHtml(args[0].stringVal[]))
+          )
+
+        timBackend.userScript.addProc("parseMarkdown", @[paramDef("md", ttyJson)], ttyString,
+          proc (args: StackView, argc: int): value.Value =
+            return initValue(toHtml(args[0].jsonVal.getStr()))
           )
 
         tim.initCommonStorage do:

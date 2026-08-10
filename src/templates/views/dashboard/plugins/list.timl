@@ -1,7 +1,24 @@
 @include("tabs/navigation")
 
+@css
+.tab-pane h1 {font-size:1.5em}	
+.tab-pane h2 {font-size:1.3em}	
+.tab-pane h3 {font-size:1.2em}	
+.tab-pane h4 {font-size:1.1em}	
+.tab-pane h5 {font-size:0.9em}	
+.tab-pane h6 {font-size:0.8em}	
+.tab-pane a.anchor-link {
+  font-size: 14px !important;
+  text-decoration:none;
+  margin-right: 5px;
+}
+@end
+
 script type="application/json" id="permission_icons"
   toString($this["permission_icons"])
+
+script type="application/json" id="plugin_details"
+  toString($this["pluginDetails"])
 
 div.row.mb-2
   div.col-lg-12 > div.px-3
@@ -22,11 +39,7 @@ div.row.g-3
               a.text-decoration-none.text-light href="#"
                 data-bs-toggle="modal" 
                 data-bs-target="#pluginDetailsModal"
-                data-plugin-name=$plugin["name"]
-                data-plugin-description=$plugin["description"]
-                data-plugin-version=$plugin["version"]
-                data-plugin-license=$plugin["license"]
-                data-plugin-author=$plugin["author"]:
+                data-plugin-id=$pluginID:
                 $plugin["name"]
             p.text-muted.mb-0.lh-sm.small: $plugin["description"]
             ul.list-unstyled.d-flex.gap-3.mt-2.mb-0
@@ -68,12 +81,6 @@ div.row.g-3
               button.btn.btn-sm.btn-primary.rounded-3
                 data-bs-toggle="modal"
                 data-bs-target="#pluginDetailsModal"
-                data-bs-target="#pluginDetailsModal"
-                data-plugin-name=$plugin["name"]
-                data-plugin-description=$plugin["description"]
-                data-plugin-version=$plugin["version"]
-                data-plugin-license=$plugin["license"]
-                data-plugin-author=$plugin["author"]
                 data-plugin-id=$pluginID: "Install plugin"
             div.dropdown.d-inline-block.ms-2.show-on-hover.d-none
               button.btn.btn-sm.btn-outline-secondary.rounded-3.border-2.dropdown-toggle
@@ -123,14 +130,13 @@ div.modal.fade id="pluginDetailsModal" tabindex="-1" aria-labelledby="pluginDeta
               path d="M12.5 11.5l-4 4l1.5 1.5"
               path d="M12 15l-1.5 -1.5"
             span.ms-1: "Permissions"
-          li.nav-item > a.nav-link href="#requirementsTab" data-bs-toggle="tab": "Requirements"
+          li.nav-item > a.nav-link href="#changelogTab" data-bs-toggle="tab": "Changelog"
         div.card.p-4.rounded-4 > div.tab-content.p-0 style="max-height: 320px; overflow-y: auto;"
           div.tab-pane.fade.show.active id="detailsTab"
           div.tab-pane.fade id="permissionsTab"
             p: "This plugin requires access to the following resources:"
             div.permissionsList
-          div.tab-pane.fade id="requirementsTab"
-            pre.bg-light.p-3.rounded-3 id="pluginRequirementsContent" style="max-height: 400px; overflow-y: auto;"
+          div.tab-pane.fade id="changelogTab"
 
 div.modal.fade id="pluginUninstallModal" tabindex="-1" aria-labelledby="pluginUninstallModalLabel" aria-hidden="true"
   div.modal-dialog.modal-dialog-centered
@@ -161,7 +167,7 @@ div.modal.fade id="pluginUninstallModal" tabindex="-1" aria-labelledby="pluginUn
   document.addEventListener('DOMContentLoaded', function() {
    
     function fetchCSRFToken(csrfTokenInput, id) {
-      fetch(`/plugins/manage/csrf`, {
+      fetch(`/dashboard/plugins/manage/csrf`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
@@ -183,12 +189,16 @@ div.modal.fade id="pluginUninstallModal" tabindex="-1" aria-labelledby="pluginUn
       });
     }
 
-   // populate plugin details modal with data attributes from the clicked plugin card
     var installModal = document.getElementById('pluginDetailsModal');
     let uninstallModal = document.getElementById('pluginUninstallModal');
     let permissionIcons = JSON.parse(document.getElementById('permission_icons').textContent);
-    
-     uninstallModal.addEventListener('show.bs.modal', function (event) {
+    let pluginDetails = JSON.parse(document.getElementById('plugin_details').textContent);
+
+    function getPluginData(id) {
+      return pluginDetails[id] || {};
+    }
+
+    uninstallModal.addEventListener('show.bs.modal', function (event) {
       var button = event.relatedTarget;
       if (!button) return;
       var pluginID = button.getAttribute('data-plugin-id');
@@ -201,16 +211,47 @@ div.modal.fade id="pluginUninstallModal" tabindex="-1" aria-labelledby="pluginUn
       fetchCSRFToken(csrfTokenInput, pluginID)
     });
 
+    function permissionLabel(name) {
+      const labels = {
+        reqDBFullAccess: "Database Full Access",
+        reqDBReadOnly: "Database Read Only",
+        reqDBWriteOnly: "Database Write Only",
+        reqEvents: "Events",
+        reqRoutes: "Routes",
+        reqAccessConfig: "Access Config",
+        reqAccessSessions: "Access Sessions",
+      };
+      return labels[name] || name.replace(/^req/, "").replace(/([A-Z])/g, " $1").trim();
+    }
+
+    function permissionDescription(name) {
+      const descriptions = {
+        reqDBFullAccess: "Full read and write access to the database",
+        reqDBReadOnly: "Read-only access to the database",
+        reqDBWriteOnly: "Write-only access to the database",
+        reqEvents: "Can register and handle application events",
+        reqRoutes: "Can register HTTP routes",
+        reqAccessConfig: "Can access application configuration",
+        reqAccessSessions: "Can access user sessions",
+      };
+      return descriptions[name] || "";
+    }
+
     installModal.addEventListener('show.bs.modal', function (event) {
       var button = event.relatedTarget;
       if (!button) return;
-      var name = button.getAttribute('data-plugin-name') || '';
-      var description = button.getAttribute('data-plugin-description') || '';
-      var version = button.getAttribute('data-plugin-version') || '';
-      var license = button.getAttribute('data-plugin-license') || '';
-      var author = button.getAttribute('data-plugin-author') || '';
-      var requirements = button.getAttribute('data-plugin-requirements') || '';
       var pluginID = button.getAttribute('data-plugin-id');
+      var data = getPluginData(pluginID);
+      var name = data.name || '';
+      var description = data.description || '';
+      var version = data.version || '';
+      var license = data.license || '';
+      var author = data.author || '';
+      var url = data.url || '';
+      var nimversion = data.nimversion || '';
+      var permissions = data.permissions || [];
+      var readmeHTML = data.readme || '';
+      var changelogHTML = data.changelog || '';
       var form = installModal.querySelector('form');
       let inputPluginId = form.querySelector('input[name="plugin_id"]');
       let csrfTokenInput = form.querySelector('input[name="csrf"]');
@@ -221,47 +262,56 @@ div.modal.fade id="pluginUninstallModal" tabindex="-1" aria-labelledby="pluginUn
       if (!csrfTokenInput) return;
       fetchCSRFToken(csrfTokenInput, pluginID)
 
-      let detailsTab = installModal.querySelector('#detailsTab');
-      detailsTab.innerHTML = `
-      Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
-      <div class="card shadow rounded-3 mt-4">
-        <ul class="list-inline mb-0 p-2" style="font-size: 0.9em;">
-          <li class="list-inline-item">
-            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-muted me-1"><path stroke="none" d="M0 0h24v24H0z" fill="none"></path><path d="M10 18a2 2 0 1 0 4 0a2 2 0 1 0 -4 0"></path><path d="M5 6a2 2 0 1 0 4 0a2 2 0 1 0 -4 0"></path><path d="M15 6a2 2 0 1 0 4 0a2 2 0 1 0 -4 0"></path><path d="M7 8v2a2 2 0 0 0 2 2h6a2 2 0 0 0 2 -2v-2"></path><path d="M12 12l0 4"></path></svg>
-            ${version}
-          </li><li class="list-inline-item">
-            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" class="text-muted me-1"><path stroke="none" d="M0 0h24v24H0z" fill="none"></path><path d="M15 21h-9a3 3 0 0 1 -3 -3v-1h10v2a2 2 0 0 0 4 0v-14a2 2 0 1 1 2 2h-2m2 -4h-11a3 3 0 0 0 -3 3v11"></path><path d="M9 7l4 0"></path><path d="M9 11l4 0"></path></svg>
-            ${license}
-          </li>
-        </ul>
-      </div>`
-      
       let pluginTitle = installModal.querySelector('#pluginTitle');
       pluginTitle.textContent = name;
-      
+
       let pluginShortDescription = installModal.querySelector('#pluginShortDescription');
       pluginShortDescription.textContent = description;
+
+      let detailsTab = installModal.querySelector('#detailsTab');
+      let metaItems = `<li class="list-inline-item">
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-muted me-1"><path stroke="none" d="M0 0h24v24H0z" fill="none"></path><path d="M10 18a2 2 0 1 0 4 0a2 2 0 1 0 -4 0"></path><path d="M5 6a2 2 0 1 0 4 0a2 2 0 1 0 -4 0"></path><path d="M15 6a2 2 0 1 0 4 0a2 2 0 1 0 -4 0"></path><path d="M7 8v2a2 2 0 0 0 2 2h6a2 2 0 0 0 2 -2v-2"></path><path d="M12 12l0 4"></path></svg> ${version}</li>
+        <li class="list-inline-item">
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" class="text-muted me-1"><path stroke="none" d="M0 0h24v24H0z" fill="none"></path><path d="M15 21h-9a3 3 0 0 1 -3 -3v-1h10v2a2 2 0 0 0 4 0v-14a2 2 0 1 1 2 2h-2m2 -4h-11a3 3 0 0 0 -3 3v11"></path><path d="M9 7l4 0"></path><path d="M9 11l4 0"></path></svg> ${license}</li>`;
+      if (author) {
+        metaItems += `<li class="list-inline-item">
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" class="text-muted me-1"><path stroke="none" d="M0 0h24v24H0z" fill="none"></path><path d="M12 12a4 4 0 1 0 0 -8a4 4 0 0 0 0 8"></path><path d="M20 21v-2a4 4 0 0 0 -4 -4h-8a4 4 0 0 0 -4 4v2"></path></svg> ${author}</li>`;
+      }
+      if (nimversion) {
+        metaItems += `<li class="list-inline-item">
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" class="text-muted me-1"><path stroke="none" d="M0 0h24v24H0z" fill="none"></path><path d="M4 8v-2a2 2 0 0 1 2 -2h2"></path><path d="M4 16v2a2 2 0 0 0 2 2h2"></path><path d="M16 4h2a2 2 0 0 1 2 2v2"></path><path d="M16 20h2a2 2 0 0 0 2 -2v-2"></path></svg> Nim ${nimversion}</li>`;
+      }
+      if (url) {
+        metaItems += `<li class="list-inline-item">
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" class="text-muted me-1"><path stroke="none" d="M0 0h24v24H0z" fill="none"></path><path d="M12 6h-6a2 2 0 0 0 -2 2v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-6"></path><path d="M11 13l9 -9"></path><path d="M15 4h5v5"></path></svg> ${url}</li>`;
+      }
+      detailsTab.innerHTML = readmeHTML + `<div class="card shadow rounded-3 mt-4"><ul class="list-inline mb-0 p-2" style="font-size: 0.9em;">${metaItems}</ul></div>`;
 
       let permissionsTab = installModal.querySelector('#permissionsTab .permissionsList');
       let permissionsTabUl = document.createElement('ul');
       permissionsTabUl.classList.add('list-group', 'shadow', 'rounded-4');
-      // sample plugin permission list
-      for(const permission of ["filesystem", "database", "template", "event", "middleware", "settings"]) {
+      for(const permission of permissions) {
         let permissionItem = document.createElement('li');
         permissionItem.classList.add('list-group-item', 'bg-transparent', 'd-flex', 'align-items-start');
-        permissionItem.innerHTML = `
+        let icon = permissionIcons[permission] || '';
+        permissionItem.innerHTML = icon ? `
           <svg class="me-3 flex-shrink-0 align-self-center" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            ${permissionIcons[permission]}
+            ${icon}
           </svg>
           <div>
-            <strong class="d-block text-capitalize">${permission}</strong>
-            <span class="text-muted small d-block">Access to the ${permission}</span>
+            <strong class="d-block text-capitalize">${permissionLabel(permission)}</strong>
+            <span class="text-muted small d-block">${permissionDescription(permission)}</span>
+          </div>` : `
+          <div>
+            <strong class="d-block text-capitalize">${permissionLabel(permission)}</strong>
+            <span class="text-muted small d-block">${permissionDescription(permission)}</span>
           </div>`;
         permissionsTabUl.appendChild(permissionItem);
       }
-
       permissionsTab.innerHTML = permissionsTabUl.outerHTML;
-      document.getElementById('pluginRequirementsContent').textContent = requirements;
+
+      let changelogTab = installModal.querySelector('#changelogTab');
+      changelogTab.innerHTML = changelogHTML || '<p class="text-muted">No changelog available</p>';
     });
   });	
 @end
