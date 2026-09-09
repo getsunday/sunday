@@ -9,7 +9,6 @@ import std/[os, tables, times, strutils]
 
 import pkg/[pluginkit, openparser/json, openparser/uuid]
 import pkg/ozark/driver/psql
-import pkg/libevent/bindings/http
 import pkg/supranim/core/[application, router,
                       request, response, services, autolink]
 export pluginkit

@@ -7,7 +7,7 @@
 
 import std/[strutils, times, options, os]
 
-import pkg/limiter
+# import pkg/limiter
 import pkg/supranim/middleware
 import ../provider/session
 

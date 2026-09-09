@@ -9,14 +9,12 @@ elif defined(linux):
   --passL:"-L/usr/local/lib/lib -L/usr/local/lib -Wl,-rpath,/usr/local/lib/lib -Wl,-rpath,/usr/local/lib -lmonocypher"
   --passC:"-I /usr/include"
 
---define:supraNative
 --mm:atomicArc
 --deepcopy:on
 --define:webapp # todo supWebApp
 --define:ssl
 --define:supraFileserver
 
---forceBuild:on
 --define:avx2
 --passC:"-mavx2"
 --passL:"-mavx2"
