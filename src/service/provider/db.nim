@@ -16,7 +16,7 @@ import pkg/supranim/support/auth
 import ./events, ./logger
 
 initService DB[Global]:
-  backend do:
+  state do:
     macro loadModels =
       # auto discover /database/models/*.nim
       # nim files prefixed with `!` will be ignored
@@ -28,7 +28,7 @@ initService DB[Global]:
           add result, nnkExportStmt.newTree(ident(f.name))
     loadModels() # autoload available models
 
-  client do:
+  api do:
 
     proc putSettings*(tab, description: string, data: JsonNode) =
       ## Utility proc to insert or update settings in the database. Settings
@@ -57,7 +57,8 @@ initService DB[Global]:
         address = getEnv("database.address"),
         name = getEnv("database.name"),
         user = getEnv("database.user"),
-        password = getEnv("database.password")
+        password = getEnv("database.password"),
+        driver = SqlDriver.pgsql
       )
 
       initOzarkPool(10)
@@ -69,6 +70,7 @@ initService DB[Global]:
           # create database tables if not exists
           Models.table(Settings).prepareTable().exec()
           Models.table(Plugins).prepareTable().exec()
+          Models.table(Themes).prepareTable().exec()
 
           # user related tables
           Models.table(Users).prepareTable().exec()

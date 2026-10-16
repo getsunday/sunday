@@ -1,27 +1,39 @@
 @include("tabs/navigation")
 
 macro renderField(field: json) =
-  const nimtype = toString($field["nimtype"])
-  const model = toString($field["model"])
+  const name =
+    if $field.hasKey("name") and len(toString($field["name"])) > 0: toString($field["name"])
+    else: toString($field["model"])
+  const fieldType =
+    if $field.hasKey("field_type") and len(toString($field["field_type"])) > 0: toString($field["field_type"])
+    else: "string"
   const label = toString($field["label"])
   const desc = toString($field["description"])
+  const rawValue =
+    if $this["values"].hasKey($name): toString($this["values"][$name])
+    else: ""
   div.mb-3
-    if $nimtype == "bool":
-      if $this["settings"]["data"][$model]:
-        input.form-check-input type="checkbox" name=$model checked
+    if $fieldType == "boolean":
+      if $rawValue == "true" or $rawValue == "on" or $rawValue == "1":
+        input.form-check-input type="checkbox" name=$name value="true" checked
         label.form-check-label: $label
       else:
-        input.form-check-input type="checkbox" name=$model
+        input.form-check-input type="checkbox" name=$name value="true"
         label.form-check-label: $label
-    elif $nimtype == "text":
+    elif $fieldType == "text":
       label.form-label: $label
-      textarea.form-control name=$model rows="4"
-    elif $nimtype == "int4" or $nimtype == "int8" or $nimtype == "int" or $nimtype == "serial" or $nimtype == "float4" or $nimtype == "float8" or $nimtype == "float":
+      textarea.form-control name=$name rows="4": $rawValue
+    elif $fieldType == "integer" or $fieldType == "float" or $fieldType == "port":
       label.form-label: $label
-      input.form-control type="number" name=$model
+      input.form-control type="number" name=$name value=$rawValue
+    elif $fieldType == "password":
+      label.form-label: $label
+      input.form-control type="password" name=$name value="" autocomplete="new-password"
     else:
       label.form-label: $label
-      input.form-control type="text" name=$model
+      input.form-control type="text" name=$name value=$rawValue
+    if $this["fieldErrors"].hasKey($name):
+      div.invalid-feedback.d-block: $this["fieldErrors"][$name]
     if len($desc) > 0:
       div.form-text: $desc
 
@@ -29,6 +41,11 @@ div.row > div.col-12
   form method="POST" action=dashboard("settings")
     input type="hidden" name="section" value=$this["section"]
     input type="hidden" name="csrf" value=$this["csrfToken"]
+    if len($this["formErrors"]) > 0:
+      div.alert.alert-danger
+        ul.mb-0
+          for $err in $this["formErrors"]:
+            li: $err
     div.card.p-0.rounded-4
       div.p-4 > div.row
         for $node in $this["layout"]:
@@ -61,13 +78,16 @@ div.row > div.col-12
                 @renderField($child)
       div.sticky-bottom.rounded-bottom-4.py-3.mt-4.border-top.shadow-lg style="background-color: rgba(0, 0, 0, 0); backdrop-filter: blur(8px);"
         div.text-end.px-4
+          button.btn.btn-dark.rounded-3 type="submit" name="settings_action" value="save": "Save Changes"
           for $node in $this["layout"]:
             if $node["type"] == "actions":
               for $btn in $node["children"]:
+                const actionId =
+                  if $btn.hasKey("id"): toString($btn["id"])
+                  else: ""
                 const btnLabel = toString($btn["label"])
-                if len($btnLabel) > 0:
+                if len($btnLabel) > 0 and $actionId == "restoreDefaults":
                   const btnClass =
                     if $btn.hasKey("class") and len(toString($btn["class"])) > 0: toString($btn["class"])
-                    else: "btn.btn-dark.rounded-3"
-                  button class=$btnClass type="submit": $btnLabel
-          button.btn.btn-dark.rounded-3 type="submit": "Save Changes"
+                    else: "btn.btn-outline-info.rounded-3.ms-2"
+                  button class=$btnClass type="submit" name="settings_action" value="restoreDefaults" onclick="return confirm('Restore default settings?')": $btnLabel

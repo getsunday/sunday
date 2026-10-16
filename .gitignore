@@ -4,6 +4,7 @@ nimcache/
 nimblecache/
 htmldocs/
 /src/storage/templates/*
+src/storage/assets
 .env.yml
 .cache
 node_modules/

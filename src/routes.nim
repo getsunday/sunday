@@ -29,7 +29,6 @@ routes do:
       # Themes routes
       get "/themes"
       post "/themes/manage"
-      post "/themes/upload"
 
       # Users routes
       get "/users"

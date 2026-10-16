@@ -158,6 +158,20 @@ ctrl postDashboardPluginsManage:
       if sundayPlugins.manager.hasPlugin(id):
         if anyPlugins.isEmpty:
           let plugin = sundayPlugins.manager.getPlugin(id)
+          let schemaErrors = pluggable.validatePluginSettings(plugin)
+          if schemaErrors.len > 0:
+            logger("PluginManager rejected plugin with invalid settings schema: " & id &
+              " (" & schemaErrors[0] & ")")
+            userSession.notify("Plugin settings schema is invalid: " & schemaErrors[0],
+              some("/dashboard/plugins"))
+            go getDashboardPlugins
+          let pageErrors = pluggable.validatePluginPages(plugin)
+          if pageErrors.len > 0:
+            logger("PluginManager rejected plugin with invalid pages schema: " & id &
+              " (" & pageErrors[0] & ")")
+            userSession.notify("Plugin pages schema is invalid: " & pageErrors[0],
+              some("/dashboard/plugins"))
+            go getDashboardPlugins
           if sundayPlugins.onInstall.hasKey(id):
             # if the plugin has an `onInstall` schema collected
             # during the loading process, we can execute the
@@ -171,15 +185,21 @@ ctrl postDashboardPluginsManage:
           # the Pluggable Service provider defines a custom
           # callback `onPluginInstall` which can be used to
           # execute any additional logic during plugin installation
-          pluggable.onInstallCallback(plugin)
+          let installErrors = pluggable.onInstallCallback(plugin)
+          if installErrors.len > 0:
+            userSession.notify("Plugin settings schema is invalid: " & installErrors[0],
+              some("/dashboard/plugins"))
+            go getDashboardPlugins
           # flash a success notification and redirect back to
           # the plugins overview screen
           userSession.notify("Plugin installed successfully", some("/dashboard/plugins"))
           logger("PluginManager installed plugin: " & plugin.getId())
           go getDashboardPlugins
         else:
-          # uninstalling a plugin involves removing the plugin's record
-          # when is explicitly requested by the user from the dashboard.
+          # uninstalling a plugin involves removing the plugin's routes
+          # and record when explicitly requested from the dashboard.
+          let plugin = sundayPlugins.manager.getPlugin(id)
+          pluggable.onUninstallCallback(plugin)
           Models.table(Plugins)
                 .removeRow()
                 .where("id", id).exec()

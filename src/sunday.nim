@@ -34,7 +34,7 @@ proc updateCommand(v: Values) =
   displayInfo("Checking for updates...")
 
 App.cli do:
-  start path(directory):
+  start path(project):
     ## Start a Sunday app from specified directroy
   
   update:
@@ -63,10 +63,9 @@ App.services do:
   # Init Oris Internationalization Service
   locales.init()
 
-  # Initialize Sunday's Plugin Manager
-  pluggable.init(App)
-
-  # Initialize Tim Templating Engine
+  # Initialize Tim Templating Engine before the Plugin Manager:
+  # declarative plugin pages are compiled into the backend
+  # Tim instance while plugins load.
   tim.init(
     App,
     App.config("tim.source").getStr,
@@ -78,9 +77,12 @@ App.services do:
         "appPort": App.config("server.port").getInt,
       },
       "homepage_cover": "/assets/photo-1579169703977-e4575236583c.jpeg",
-      "login_cover": "https://images.unsplash.com/flagged/photo-1562061162-254644341e89?q=80&w=1740&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
+      "login_cover": ""
     }
   )
+
+  # Initialize Sunday's Plugin Manager
+  pluggable.init(App)
 
   when defined release: # init static assets
     assets.embedAssets("assets")
@@ -104,14 +106,18 @@ when defined release:
 
   App.withAssetsHandler:
     proc (req: var Request, res: var Response, hasFoundResource: var bool) =
-      # Serve static assets from the embedded StaticBundle
-      req.sendEmbeddedAsset(req.path, res.getHeaders(), hasFoundResource)
-      if not hasFoundResource:
-        # If not found in embedded assets, try serving from
-        # the local `/assets` directory
-        if req.path.startsWith("/assets/"):
-          hasFoundResource =
-            req.sendAssets(storagePath / "assets", req.path, res.getHeaders())
+      when defined release:
+        # Serve static assets from the embedded StaticBundle
+        req.sendEmbeddedAsset(req.path, res.getHeaders(), hasFoundResource)
+      if not hasFoundResource and req.path.startsWith("/assets/"):
+        # Serve project assets, then fall back to the active theme
+        # and the default theme without copying theme files.
+        req.sendAssets(req.path, res.getHeaders(), hasFoundResource)
+        if not hasFoundResource:
+          let themeAsset = resolvePublicAsset(req.path)
+          if themeAsset.len > 0:
+            req.sendAssetFile(themeAsset, res.getHeaders())
+            hasFoundResource = true
 
 #
 # Starts the application. This will start the HTTP

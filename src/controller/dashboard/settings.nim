@@ -5,7 +5,7 @@
 #     Made by Humans from OpenPeeps
 #     https://github.com/openpeeps/sunday
 
-import std/[os, envvars, osproc, strutils, times]
+import std/[os, envvars, osproc, strutils, times, uri, sequtils, tables]
 import pkg/bag
 import pkg/ozark/driver/psql
 
@@ -13,6 +13,7 @@ import pkg/supranim/[controller, application]
 import pkg/supranim/core/[paths, utils, fileserver]
 
 import ../../service/provider/[db, session, tim]
+import ../../service/plugin_settings
 
 let timezones = [
   "GMT-1", "GMT-10", "GMT-11", "GMT-12", "GMT-13", "GMT-14", "GMT-2", "GMT-3", "GMT-4", "GMT-5", "GMT-6", "GMT-7", "GMT-8", "GMT-9",
@@ -23,7 +24,8 @@ let timezones = [
 proc getPluginTabMeta: (JsonNode, JsonNode) =
   ## Queries plugin settings tab metadata from DB.
   ## Returns (tabsArray, metaBySlug) where metaBySlug is a JSON object
-  ## mapping slug -> tab metadata for O(1) lookup.
+  ## mapping slug -> normalized tab schema for O(1) lookup.
+  ## Tabs with an invalid settings schema are skipped and never rendered.
   var tabs = newJArray()
   var bySlug = newJObject()
   withDBPool do:
@@ -31,16 +33,20 @@ proc getPluginTabMeta: (JsonNode, JsonNode) =
     for plugin in plugins:
       let settings = plugin.getSettingsSchema()
       if settings.len == 0: continue
-      let schema = parseJson(settings)
-      if not schema.hasKey("settings") or not schema["settings"].hasKey("tabs"): continue
-      for tab in schema["settings"]["tabs"]:
+      var schema: JsonNode
+      try:
+        schema = fromJson(settings)
+      except CatchableError:
+        continue
+      if not schema.hasKey("settings"): continue
+      let payload = schema["settings"]
+      if validatePluginSettingsSchema(payload).len > 0: continue
+      for tab in payload["tabs"]:
+        if not tab.hasKey("slug"): continue
         let slug = tab["slug"].getStr()
-        tabs.add(%*{"name": slug, "label": tab["label"]})
-        bySlug[slug] = %*{
-          "layout": tab["layout"],
-          "fields": tab["fields"],
-          "model": tab["model"]
-        }
+        let normalized = normalizePluginTabForRender(tab)
+        tabs.add(%*{"name": slug, "label": normalized["label"]})
+        bySlug[slug] = normalized
   (tabs, bySlug)
 
 ctrl getDashboardSettings:
@@ -107,18 +113,28 @@ ctrl getDashboardSettings:
               })
             else: render("errors.5xx")
           elif pluginMeta.hasKey(slug):
-            let meta = pluginMeta[slug]
-            let record = Models.table(Settings).selectAll()
+            let tab = pluginMeta[slug]
+            var record = Models.table(Settings).selectAll()
+                                .where("tab", slug).getAll()
+            if record.isEmpty:
+              putSettings(slug, tab["label"].getStr("Plugin settings"),
+                restorePluginSettings(tab))
+              record = Models.table(Settings).selectAll()
                                 .where("tab", slug).getAll()
             if likely(record.isEmpty == false):
               let data = record.first()
+              let stored = normalizeStoredPluginSettings(tab,
+                fromJson(data.getData())).value
               render("layout/settings", layout="dashboard", local = &*{
                 "tabs": tabs, "page_title": "Settings", "page_slug": "settings",
                 "section": slug,
-                "csrfToken": userSession.genCSRF("/dashboard/settings?tab=" & slug),
+                "csrfToken": userSession.genCSRF(settingsCsrfId(slug)),
                 "notifications": userSession.getNotifications("/dashboard/settings?tab=" & slug),
-                "layout": meta["layout"],
-                "settings": {"data": fromJson(data.getData())}
+                "layout": tab["layout"],
+                "settings": {"data": stored},
+                "values": stored,
+                "formErrors": %*[],
+                "fieldErrors": %*{}
               })
             else: render("errors.5xx")
           else:
@@ -200,12 +216,70 @@ ctrl postDashboardSettings:
           "maintenance_mode": fields.hasKey("maintenance_mode")
         })
       else:
-        # Plugin settings tab (slug = UUID)
-        var data = newJObject()
-        for key, val in fields.pairs:
-          if key notin ["section", "csrf"]:
-            data[key] = %val
-        updateSettings(section, "Plugin settings", data)
+        # Plugin settings tab, validated against its compiled JSON schema.
+        let bodyOpt = req.getBody
+        if bodyOpt.isNone:
+          userSession.notify("Invalid form data", some("/dashboard/settings"))
+          go getDashboardSettings
+        else:
+          let submittedPairs = toSeq(bodyOpt.get().decodeQuery)
+          var submittedTable = initTable[string, string]()
+          for pair in submittedPairs:
+            submittedTable[pair[0]] = pair[1]
+          let csrfId = settingsCsrfId(section)
+          withDBPool do:
+            let (pluginTabs, pluginMeta) = getPluginTabMeta()
+            if not pluginMeta.hasKey(section):
+              userSession.notify("Unknown settings section", some("/dashboard/settings"))
+              go getDashboardSettings
+            else:
+              let tab = pluginMeta[section]
+              let tabLabel = tab["label"].getStr("Plugin settings")
+              let redirectToTab = "/dashboard/settings?tab=" & section
+              if not userSession.validateCSRF(csrfId,
+                  submittedTable.getOrDefault("csrf", "")):
+                userSession.notify("Invalid or expired form token. Please try again.",
+                  some(redirectToTab))
+                go getDashboardSettings, [("tab", section)]
+              else:
+                let action = submittedTable.getOrDefault("settings_action", "save")
+                if action == "restoreDefaults":
+                  updateSettings(section, tabLabel, restorePluginSettings(tab))
+                  userSession.notify("Default settings restored.", some(redirectToTab))
+                  go getDashboardSettings, [("tab", section)]
+                elif action != "save":
+                  userSession.notify("Unknown settings action", some(redirectToTab))
+                  go getDashboardSettings, [("tab", section)]
+                else:
+                  let record = Models.table(Settings).selectAll()
+                                      .where("tab", section).getAll()
+                  var existing = newJObject()
+                  if not record.isEmpty:
+                    existing = normalizeStoredPluginSettings(tab,
+                      fromJson(record.first().getData())).value
+                  let outcome = coercePluginSettings(tab, submittedPairs, existing)
+                  if outcome.valid:
+                    updateSettings(section, tabLabel, outcome.value)
+                    userSession.notify("Settings updated successfully.", some(redirectToTab))
+                    go getDashboardSettings, [("tab", section)]
+                  else:
+                    var fieldErrors = newJObject()
+                    var formErrors = newJArray()
+                    for err in outcome.errors:
+                      formErrors.add(%err.message)
+                      if err.field.len > 0 and not fieldErrors.hasKey(err.field):
+                        fieldErrors[err.field] = %err.message
+                    render("layout/settings", layout="dashboard", local = &*{
+                      "tabs": pluginTabs, "page_title": "Settings", "page_slug": "settings",
+                      "section": section,
+                      "csrfToken": userSession.genCSRF(csrfId),
+                      "notifications": userSession.getNotifications(redirectToTab),
+                      "layout": tab["layout"],
+                      "settings": {"data": existing},
+                      "values": mergeFormValues(existing, outcome.form),
+                      "formErrors": formErrors,
+                      "fieldErrors": fieldErrors
+                    })
 
     userSession.notify("Settings updated successfully.", some("/dashboard/settings?tab=" & section))
     go getDashboardSettings, [("tab", section)]

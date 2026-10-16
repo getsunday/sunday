@@ -79,10 +79,6 @@ npm run build
 - 👋 Wanna help? [Fork it!](https://github.com/openpeeps/sunday/fork)
 - 🎉 Spread the word! **Tell your friends about Sunday**
 
-|  |  |
-|---|---|
-| <a href="https://opencode.ai/go?ref=BHMEEK48QX"><img src="https://github.com/openpeeps/pistachio/blob/main/.github/opencode.png" alt="OpenCode"></a> | Switch to **Open-Source LLMs** via OpenCode GO, choosing from a variety of powerful models such as DeepSeek, Qwen, Kimi, GLM-5, MiniMax, MiMo. 🍕 [Use our referral link to get started!](https://opencode.ai/go?ref=BHMEEK48QX)|
-
 ### 🎩 License
 Sunday Publishing Platform | `AGPLv3` license. [Made in 🇪🇺 EU by Humans from OpenPeeps](https://github.com/openpeeps).<br>
 Copyright &copy; 2026 OpenPeeps & Contributors &mdash; All rights reserved.

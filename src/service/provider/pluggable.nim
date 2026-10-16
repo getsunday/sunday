@@ -14,6 +14,9 @@ import pkg/supranim/core/[application, router,
 export pluginkit
 
 import ./logger, ./db
+import ../plugin_settings
+import ../plugin_pages
+import ../plugin_page_host
 
 ## This service provides a pluggable architecture for the
 ## application, allowing developers to create and register
@@ -24,7 +27,7 @@ import ./logger, ./db
 
 initService SundayPluginManager[Singleton]:
   ## A singleton of `PluginManager` from the `pluginkit` package.
-  backend do:
+  state do:
     type
       SundayPluginManager* = ref object        
         manager*: PluginManager
@@ -34,10 +37,15 @@ initService SundayPluginManager[Singleton]:
           ## A table mapping table name to plugin ID for
           ## uninstalling tables during plugin uninstallation
           ## based on the collected schemas in the `onInstall` table
+        payloadCache*: Table[string, JsonNode]
+          ## Startup snapshots of compiled plugin payloads (settings, pages,
+          ## navigation) by plugin id. Calling into a plugin binary is only
+          ## safe on the main thread, so request handlers read this cache
+          ## instead of invoking plugin event functions.
       
       PluginHandler* = proc(req: ptr Request, res: ptr Response): void {.cdecl, gcsafe.}
       plugin_callback_fn* = proc (): cstring {.cdecl.}
-  client do:
+  api do:
     # fwd declarations
     proc onPluginLoaded(plugin: Plugin)
     proc onPluginUnloaded(plugin: Plugin)
@@ -52,6 +60,7 @@ initService SundayPluginManager[Singleton]:
             # set the callbacks for plugin events when the instance is created
             instance[].onInstall = newOrderedTable[NanoID, RuntimeSchemas]()
             instance[].onUninstallAliases = newTable[string, NanoID]()
+            instance[].payloadCache = initTable[string, JsonNode]()
             instance[].manager = PluginManager(callbacks:
               PluginManagerCallbacks(
                 onLoad: onPluginLoaded,
@@ -76,6 +85,20 @@ initService SundayPluginManager[Singleton]:
           let rp = if autolinked.params.isSome(): autolinked.params.get() else: @[]
           registerRoute(App.router, (autolinked[1], autolinked[2]), httpMethod, bridge, routeParams = rp)
           logger("PluginManager registered route: " & path & " -> " & handler)
+
+    proc unregisterPluginRoutes*(plugin: Plugin) =
+      ## Removes a plugin's custom routes from the application router.
+      ## Mirrors `registerPluginRoutes` using the same autolinked keys.
+      ## Never calls into the plugin binary, so it is safe from any thread.
+      if plugin.registerRoutes.isNil or plugin.registerRoutes.kind != JObject:
+        return
+      for handler, routeObj in plugin.registerRoutes:
+        let path = routeObj["path"].getStr()
+        let methodName = routeObj["method"].getStr().replace("Http", "").toUpperAscii()
+        let httpMethod = parseEnum[HttpMethod](methodName)
+        let autolinked = autolinkController(path, httpMethod)
+        unregisterRoute(App.router, (autolinked[1], autolinked[2]), httpMethod)
+        logger("PluginManager unregistered route: " & path & " -> " & handler)
 
     proc onPluginLoaded(plugin: Plugin) =
       # All Sunday plugins must provide a serialized schema for database
@@ -125,28 +148,172 @@ initService SundayPluginManager[Singleton]:
     proc onPluginError(plugin: Plugin, error: string) =
       discard
 
-    proc onInstallCallback*(plugin: Plugin) =
-      ## This callback is not part of the pluginkit package, instead it is a 
+    proc fetchPluginSettingsPayload*(plugin: Plugin): JsonNode =
+      ## Reads the compiled settings JSON embedded in a plugin binary.
+      ## Calls into the plugin, so it must only run on the main thread
+      ## during startup. Request handlers use the cached payload instead.
+      result = newJObject()
+      let settingsFn = cast[plugin_event_load_fn](
+        plugin.getHandle.symAddr("plugin_event_load_settings"))
+      if settingsFn != nil:
+        try:
+          result = fromJson(cstrToString(settingsFn()))
+        except JsonParsingError, ValueError:
+          result = newJObject()
+
+    proc loadPluginSettingsPayload*(plugin: Plugin): JsonNode =
+      ## Returns the cached settings payload for a plugin.
+      if pluginManager().payloadCache.hasKey(plugin.getId()):
+        let cached = pluginManager().payloadCache[plugin.getId()]
+        if cached.hasKey("settings"):
+          return copy(cached["settings"])
+      logger("PluginManager settings payload unavailable for: " &
+        plugin.getId(), ERROR)
+      newJObject()
+
+    proc validatePluginSettings*(plugin: Plugin): seq[string] =
+      ## Validates a plugin's compiled settings schema before installation
+      ## or activation. Returns an empty sequence when the schema is valid
+      ## or when the plugin declares no settings tabs.
+      let payload = loadPluginSettingsPayload(plugin)
+      if payload.kind != JObject or not payload.hasKey("tabs"):
+        return @[]
+      if payload["tabs"].kind != JArray or payload["tabs"].len == 0:
+        return @[]
+      validatePluginSettingsSchema(payload)
+
+    proc fetchPluginPagesPayload*(plugin: Plugin): JsonNode =
+      ## Reads the compiled page schemas embedded in a plugin binary.
+      ## Calls into the plugin, so it must only run on the main thread
+      ## during startup. Request handlers use the cached payload instead.
+      result = newJObject()
+      let pagesFn = cast[plugin_event_load_fn](
+        plugin.getHandle.symAddr("plugin_event_load_pages"))
+      if pagesFn != nil:
+        try:
+          result = fromJson(cstrToString(pagesFn()))
+        except JsonParsingError, ValueError:
+          result = newJObject()
+
+    proc fetchPluginNavigationPayload*(plugin: Plugin): JsonNode =
+      ## Reads the compiled navigation data embedded in a plugin binary.
+      ## Calls into the plugin, so it must only run on the main thread
+      ## during startup. Request handlers use the cached payload instead.
+      result = newJObject()
+      let navigationFn = cast[plugin_event_load_fn](
+        plugin.getHandle.symAddr("plugin_event_load_navigation"))
+      if navigationFn != nil:
+        try:
+          result = fromJson(cstrToString(navigationFn()))
+        except JsonParsingError, ValueError:
+          result = newJObject()
+
+    proc loadPluginPagesPayload*(plugin: Plugin): JsonNode =
+      ## Returns the cached page schemas for a plugin.
+      if pluginManager().payloadCache.hasKey(plugin.getId()):
+        let cached = pluginManager().payloadCache[plugin.getId()]
+        if cached.hasKey("pages"):
+          return copy(cached["pages"])
+      logger("PluginManager pages payload unavailable for: " &
+        plugin.getId(), ERROR)
+      newJObject()
+
+    proc loadPluginNavigationPayload*(plugin: Plugin): JsonNode =
+      ## Returns the cached navigation data for a plugin.
+      if pluginManager().payloadCache.hasKey(plugin.getId()):
+        let cached = pluginManager().payloadCache[plugin.getId()]
+        if cached.hasKey("navigation"):
+          return copy(cached["navigation"])
+      logger("PluginManager navigation payload unavailable for: " &
+        plugin.getId(), ERROR)
+      newJObject()
+
+    proc cachePluginPayloads*(plugin: Plugin) =
+      ## Snapshots a plugin's compiled payloads into host memory.
+      ## Must run on the main thread while plugins load at startup.
+      pluginManager().payloadCache[plugin.getId()] = %*{
+        "settings": fetchPluginSettingsPayload(plugin),
+        "pages": fetchPluginPagesPayload(plugin),
+        "navigation": fetchPluginNavigationPayload(plugin)
+      }
+
+    proc sanitizePluginKey*(name: string): string =
+      ## Builds a stable view/route key from a plugin name.
+      for c in name.toLowerAscii:
+        if c in Letters + Digits:
+          result.add(c)
+        elif result.len > 0 and result[^1] != '_':
+          result.add('_')
+      result = result.strip(chars = {'_'})
+      if result.len == 0:
+        result = "plugin"
+
+    proc validatePluginPages*(plugin: Plugin): seq[string] =
+      ## Validates a plugin's compiled page schemas before installation.
+      ## Returns an empty sequence when valid or when no pages declared.
+      let payload = loadPluginPagesPayload(plugin)
+      if payload.kind != JObject or not payload.hasKey("pages"):
+        return @[]
+      if payload["pages"].kind != JArray or payload["pages"].len == 0:
+        return @[]
+      if not pluginManager().onInstall.hasKey(plugin.getId()):
+        return @["plugin database schemas are unavailable"]
+      let tables = runtimeTables(pluginManager().onInstall[plugin.getId()])
+      validatePluginPagesSchema(payload, tables)
+
+    proc compilePluginPages*(plugin: Plugin, payload: JsonNode,
+        tables: Table[string, Table[string, string]]): seq[string] =
+      ## Compiles validated page schemas into the backend Tim engine and
+      ## registers host-owned routes for them. Returns errors, if any.
+      var routePaths: seq[string] = @[]
+      if plugin.registerRoutes != nil and
+          plugin.registerRoutes.kind == JObject:
+        for _, routeObj in plugin.registerRoutes.pairs:
+          if routeObj.kind == JObject and routeObj.hasKey("path"):
+            routePaths.add(routeObj["path"].getStr())
+      let keyName = sanitizePluginKey($plugin.getName())
+      for pageNode in payload["pages"]:
+        let tableName = resolvePageTable(pageNode["data"]["model"].getStr,
+          tables)
+        var page = parsePluginPage(plugin.getId(), keyName, pageNode,
+          tableName, tables[tableName])
+        if page.path in routePaths:
+          return @["page path \"" & page.path &
+            "\" is also declared in `routes:` - remove the stub route"]
+        try:
+          let source = pageToTiml(pageNode, page.data.dataKey)
+          page.viewKey = compilePluginPageView(keyName, page.id, source)
+        except CatchableError as e:
+          return @["could not compile page \"" & page.id & "\": " & e.msg]
+        registerPluginPage(page)
+        registerPluginPageRoute(page)
+        logger("PluginManager registered page: " & page.path)
+      @[]
+
+    proc onInstallCallback*(plugin: Plugin): seq[string] =
+      ## This callback is not part of the pluginkit package, instead it is a
       ## custom callback defined at the Sunday application level to handle
       ## plugin installation events triggered from the dashboard UI via control handlers.
+      ## Returns schema validation errors without writing anything when invalid.
+      let schemaErrors = validatePluginSettings(plugin)
+      if schemaErrors.len > 0:
+        return schemaErrors
+      let pageErrors = validatePluginPages(plugin)
+      if pageErrors.len > 0:
+        return pageErrors
 
-      var pluginNavigation = newJObject()
-      let navigationFn = cast[plugin_event_load_fn](plugin.getHandle.symAddr("plugin_event_load_navigation"))
-      if navigationFn != nil:
-        pluginNavigation = fromJson(cstrToString(navigationFn()))
+      let pluginNavigation = loadPluginNavigationPayload(plugin)
 
-      var pluginSettings = newJObject()
-      let settingsFn = cast[plugin_event_load_fn](plugin.getHandle.symAddr("plugin_event_load_settings"))
-      if settingsFn != nil:
-        pluginSettings = fromJson(cstrToString(settingsFn()))
-        for tab in pluginSettings["tabs"]:
+      var pluginSettings = loadPluginSettingsPayload(plugin)
+      if pluginSettings.kind == JObject and pluginSettings.hasKey("tabs"):
+        let canonicalTabs = normalizePluginTabsForInstall(pluginSettings)
+        for tab in canonicalTabs["tabs"]:
           let slug = $(uuid.v4())
           tab["slug"] = %slug
-          var defaults = newJObject()
-          for fname, finfo in tab["fields"]:
-            if finfo.hasKey("default"):
-              defaults[fname] = finfo["default"]
-          putSettings(slug, tab["label"].getStr(), defaults)
+          putSettings(slug, tab["label"].getStr(), restorePluginSettings(tab))
+        pluginSettings = canonicalTabs
+
+      let pluginPages = loadPluginPagesPayload(plugin)
 
       withDBPool do:
         Models.table(Plugins).insert({
@@ -155,12 +322,28 @@ initService SundayPluginManager[Singleton]:
           "settings_schema": toJson(%*{
             "navigation": pluginNavigation,
             "routes": plugin.registerRoutes,
-            "settings": pluginSettings
+            "settings": pluginSettings,
+            "pages": pluginPages
           }),
           "installed_at": $(now())
         }).exec()
-      
+
       registerPluginRoutes(plugin)
+      if pluginPages.kind == JObject and pluginPages.hasKey("pages"):
+        if pluginManager().onInstall.hasKey(plugin.getId()):
+          let tables = runtimeTables(pluginManager().onInstall[plugin.getId()])
+          let compileErrors = compilePluginPages(plugin, pluginPages, tables)
+          if compileErrors.len > 0:
+            return compileErrors
+      @[]
+
+    proc onUninstallCallback*(plugin: Plugin) =
+      ## Removes everything an install registered at request time: the
+      ## plugin's custom routes, its host-owned page routes and compiled
+      ## views. The database row is deleted by the caller. Never calls
+      ## into the plugin binary, so it is safe from any thread.
+      unregisterPluginRoutes(plugin)
+      unregisterPluginPages(plugin.getId())
 
     const pluginsDir = "plugins"
     const pluginExt =
@@ -168,6 +351,95 @@ initService SundayPluginManager[Singleton]:
       elif defined(macosx): ".dylib"
       else: ".so" # default to .so for Linux and other Unix-like systems
       
+    proc migrateInstalledPluginSettings*(): seq[string] =
+      ## Validates stored plugin settings schemas on startup and migrates
+      ## existing settings rows to canonical typed JSON. Plugins with an
+      ## invalid schema are marked as errored and their routes are skipped.
+      ## Returns the ids of plugins with an invalid settings schema.
+      withDBPool do:
+        let installed = Models.rawSQL(
+          "SELECT id, settings_schema FROM plugins").getWith(Plugins)
+        if installed.isEmpty: return @[]
+        for pluginRow in installed:
+          let id = pluginRow.getId()
+          let storedSchema = pluginRow.getSettingsSchema()
+          if storedSchema.len == 0: continue
+          var schema: JsonNode
+          try:
+            schema = parseJson(storedSchema)
+          except JsonParsingError, ValueError:
+            logger("PluginManager invalid settings schema for: " & id, ERROR)
+            Models.table(Plugins).update({"status": "2"}).where("id", id).exec()
+            result.add(id)
+            continue
+          if not schema.hasKey("settings"):
+            continue
+          let schemaErrors = validatePluginSettingsSchema(schema["settings"])
+          if schemaErrors.len > 0:
+            logger("PluginManager invalid settings schema for: " & id &
+              " (" & schemaErrors[0] & ")", ERROR)
+            Models.table(Plugins).update({"status": "2"}).where("id", id).exec()
+            result.add(id)
+            continue
+          for tab in schema["settings"]["tabs"]:
+            if not tab.hasKey("slug"): continue
+            let slug = tab["slug"].getStr()
+            let label =
+              if tab.hasKey("label"): tab["label"].getStr()
+              else: slug
+            let rows = Models.table(Settings).selectAll()
+                              .where("tab", slug).getAll()
+            if rows.isEmpty:
+              putSettings(slug, label, restorePluginSettings(tab))
+              logger("PluginManager seeded missing settings for: " & slug)
+            else:
+              let row = rows.first()
+              let migration = normalizeStoredPluginSettings(tab,
+                fromJson(row.getData()))
+              if migration.changed:
+                updateSettings(slug, row.getDescription(), migration.value)
+              for warning in migration.warnings:
+                logger("PluginManager settings migration [" & slug & "]: " & warning)
+
+    proc loadInstalledPluginPages*(): seq[string] =
+      ## Validates stored plugin page schemas on startup, compiles them into
+      ## the backend Tim engine and registers host-owned routes. Plugins with
+      ## an invalid pages schema are marked as errored. Returns their ids.
+      withDBPool do:
+        let installed = Models.rawSQL(
+          "SELECT id, settings_schema FROM plugins").getWith(Plugins)
+        if installed.isEmpty: return @[]
+        for pluginRow in installed:
+          let id = pluginRow.getId()
+          let storedSchema = pluginRow.getSettingsSchema()
+          if storedSchema.len == 0: continue
+          var schema: JsonNode
+          try:
+            schema = parseJson(storedSchema)
+          except JsonParsingError, ValueError:
+            continue
+          if not schema.hasKey("pages"): continue
+          if not pluginManager().onInstall.hasKey(id):
+            logger("PluginManager skipped pages for unloaded plugin: " & id, ERROR)
+            continue
+          let tables = runtimeTables(pluginManager().onInstall[id])
+          let pageErrors = validatePluginPagesSchema(schema["pages"], tables)
+          if pageErrors.len > 0:
+            logger("PluginManager invalid pages schema for: " & id &
+              " (" & pageErrors[0] & ")", ERROR)
+            Models.table(Plugins).update({"status": "2"}).where("id", id).exec()
+            result.add(id)
+            continue
+          if pluginManager().manager.hasPlugin(id):
+            let plugin = pluginManager().manager.getPlugin(id)
+            let compileErrors = compilePluginPages(plugin, schema["pages"],
+              tables)
+            if compileErrors.len > 0:
+              logger("PluginManager could not compile pages for: " & id &
+                " (" & compileErrors[0] & ")", ERROR)
+              Models.table(Plugins).update({"status": "2"}).where("id", id).exec()
+              result.add(id)
+
     proc init*(app: Application) =
       ## Initialize an instance of the PluginManager when the
       ## service is initialized. This will allow plugins to be
@@ -180,13 +452,30 @@ initService SundayPluginManager[Singleton]:
       for path in walkFiles(pluginsPath / "*"):
         if path.splitFile.ext == pluginExt:
           let pluginId = pluginManager().manager.load(path)
+          # snapshot compiled payloads while on the main thread:
+          # calling into plugin binaries is not safe from workers
+          if pluginManager().manager.hasPlugin(pluginId):
+            cachePluginPayloads(pluginManager().manager.getPlugin(pluginId))
       
+      # validate stored plugin settings schemas and migrate existing
+      # settings rows to canonical typed JSON before restoring routes
+      var invalidPlugins = migrateInstalledPluginSettings()
+
+      # compile declarative plugin pages into the backend Tim engine
+      # and register their host-owned routes
+      for invalidId in loadInstalledPluginPages():
+        if invalidId notin invalidPlugins:
+          invalidPlugins.add(invalidId)
+
       # restore routes for installed plugins
       withDBPool do:
         let installed = Models.table(Plugins).select(["id"]).getAll()
         if not installed.isEmpty:
           for pluginRow in installed:
             let id = pluginRow.getId()
+            if id in invalidPlugins:
+              logger("PluginManager skipped routes for plugin with invalid settings: " & id, ERROR)
+              continue
             if pluginManager().manager.hasPlugin(id):
               let plugin = pluginManager().manager.getPlugin(id)
               registerPluginRoutes(plugin)

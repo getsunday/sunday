@@ -12,9 +12,11 @@ binDir        = "build"
 # Dependencies
 
 requires "nim >= 2.0.0"
-requires "supranim >= 0.1.9[powpow]"
+requires "supranim >= 0.2.0"
 requires "supranim_session >= 0.1.2"
-requires "tim >= 0.2.7"
+requires "emitter >= 0.3.0"
+requires "tim >= 0.2.10"
+requires "semver >= 1.2.3"
 requires "bag >= 0.1.0"
 requires "openparser >= 0.1.2"
 requires "ozark >= 0.1.6"
@@ -25,6 +27,7 @@ requires "multipart >= 0.1.2"
 requires "marvdown >= 0.1.2"
 requires "oris >= 0.1.0"
 requires "pluginkit >= 0.1.1"
+requires "valido >= 0.1.0"
 
 task prod, "Generate a production build":
   exec "nimble build -d:release"
